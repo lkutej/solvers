@@ -31,13 +31,13 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace LESModels
+namespace pPFLESModels
 {
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 defineTypeNameAndDebug(dynamicSmagorinsky, 0);
-addToRunTimeSelectionTable(LESModel, dynamicSmagorinsky, dictionary);
+addToRunTimeSelectionTable(pPFLESModel, dynamicSmagorinsky, dictionary);
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -106,13 +106,14 @@ dynamicSmagorinsky::dynamicSmagorinsky
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
     const word& turbulenceModelName,
     const word& modelName
 )
 :
-    LESModel(typeName, U, phi, transport),
-    GenEddyVisc(U, phi, transport),
+    pPFLESModel(typeName, U, phi, beta, transport),
+    pPFGenEddyVisc(U, phi, beta, transport),
 
     k_
     (
@@ -143,7 +144,7 @@ void dynamicSmagorinsky::correct
     const tmp<volTensorField>& gradU
 )
 {
-    LESModel::correct(gradU);
+    pPFLESModel::correct(gradU);
 
     const volSymmTensorField D(dev(symm(gradU)));
 
@@ -155,7 +156,7 @@ void dynamicSmagorinsky::correct
 
 bool dynamicSmagorinsky::read()
 {
-    if (GenEddyVisc::read())
+    if (pPFGenEddyVisc::read())
     {
         filter_.read(coeffDict());
 
@@ -170,7 +171,7 @@ bool dynamicSmagorinsky::read()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace LESModels
+} // End namespace pPFLESModels
 } // End namespace incompressible
 } // End namespace Foam
 
