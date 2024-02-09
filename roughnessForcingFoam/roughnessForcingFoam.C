@@ -42,6 +42,7 @@ Description
 #include "IOporosityModelList.H"
 #include "IOMRFZoneList.H"
 #include "fixedFluxPressureFvPatchScalarField.H"
+#include "roughnessModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -86,7 +87,8 @@ int main(int argc, char *argv[])
                 turbulence->correct();
             }
         }
-
+        
+        roughnessModel->updateForce(U); 
         runTime.write();
 
         Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
