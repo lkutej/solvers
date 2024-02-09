@@ -25,33 +25,59 @@ License
 
 #include "pPFPorosityModel.H"
 
-// * * * * * * * * * * * * * * * * Selector  * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-Foam::autoPtr<Foam::pPFPorosityModel> Foam::pPFPorosityModel::New
+namespace Foam
+{
+    defineTypeNameAndDebug(pPFPorosityModel, 0);
+    defineRunTimeSelectionTable(pPFPorosityModel, dictionary);
+}
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::pPFPorosityModel::pPFPorosityModel
 (
     const volVectorField& U,
     const volScalarField& alpha,
     const dictionary& pPFPorosityModelDict
 )
+:
+    regIOobject
+    (
+        IOobject
+        (
+            "pPFPorosityModel",
+            U.time().constant(),
+            U.db(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        )
+    ),
+    runTime_(U.time()),
+    mesh_(U.mesh()),
+    
+    U_(U),
+    
+    alpha_(alpha),
+    
+    pPFPorosityModelDict_(pPFPorosityModelDict),
+    
+    y_(mesh_)
+{}
+
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+Foam::pPFPorosityModel::~pPFPorosityModel()
+{}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+bool Foam::pPFPorosityModel::writeData(Ostream& os) const
 {
-    word pPFPorosityModelType(pPFPorosityModelDict.lookup("type"));
-
-    Info<< "Selecting pPFPorosityModel: " << pPFPorosityModelType << endl;
-
-    dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(pPFPorosityModelType);
-
-    if (cstrIter == dictionaryConstructorTablePtr_->end())
-    {
-        FatalErrorIn("pPFPorosityModel::New")
-            << "Unknown pPFPorosityModelType type "
-            << pPFPorosityModelType << endl << endl
-            << "Valid pPFPorosityModel types are : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
-    }
-
-    return cstrIter()(U, alpha, pPFPorosityModelDict);
+    return os.good();
 }
 
 
