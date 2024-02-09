@@ -21,7 +21,7 @@ License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::incompressible::LESModels::dynamicSmagorinsky
+    Foam::incompressible::pPFLESModels::dynamicSmagorinsky
 
 Description
     The isochoric dynamic Smagorinsky model for incompressible flows.
@@ -82,7 +82,7 @@ Notes
 #ifndef dynamicSmagorinsky_H
 #define dynamicSmagorinsky_H
 
-#include "Smagorinsky.H"
+#include "pPFSmagorinsky.H"
 #include "LESfilter.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -90,7 +90,7 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace LESModels
+namespace pPFLESModels
 {
 
 /*---------------------------------------------------------------------------*\
@@ -99,7 +99,7 @@ namespace LESModels
 
 class dynamicSmagorinsky
 :
-    public GenEddyVisc
+    public pPFGenEddyVisc
 {
     // Private data
 
@@ -135,8 +135,9 @@ public:
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-	    const word& turbulenceModelName = turbulenceModel::typeName,
+	    const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName,
             const word& modelName = typeName
         );
 
@@ -163,7 +164,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace LESModels
+} // End namespace pPFLESModels
 } // End namespace incompressible
 } // End namespace Foam
 
