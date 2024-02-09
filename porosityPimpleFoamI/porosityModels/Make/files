@@ -1,0 +1,16 @@
+pPFPorosityModel/pPFPorosityModel.C
+pPFPorosityModel/newPPFPorosityModel.C
+/*
+Whitaker/Whitaker.C
+prescribedDragHet/prescribedDragHet.C
+constantAB/constantAB.C
+geometric/geometric.C
+geometricHet/geometricHet.C
+geometricHetSqr/geometricHetSqr.C
+geometricPou/geometricPou.C
+*/
+myGeo/myGeo.C
+myGeoUnbound/myGeoUnbound.C
+prescribedDragHet/prescribedDragHet.C
+
+LIB = $(FOAM_USER_LIBBIN)/libpPFPorosityModelsI
