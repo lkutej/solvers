@@ -74,13 +74,14 @@ tmp<fvVectorMatrix> Whitaker::force(volVectorField& U) const
 
   
     }
-
+    Info<<d_p<<nu<<endl;
 
     return
     (
 
-	  fvm::SuSp(-nu*((180.0*sqr(alpha_))/(sqr(d_p)*(1.0-alpha_)))*(1.0+(((1.0-alpha_)*d_p)/(100.0*alpha_*nu)*mag(U))),U)  - fvm::laplacian((1.0-alpha_),U)
-      //fvm::SuSp(-0.5*mag(U),U)
+        //fvm::SuSp(-nu*((180.0*alpha_)/(sqr(d_p*(1.0-alpha_))))*(alpha_+(((1.0-alpha_)*d_p)/(100.0*nu)*mag(U))),U)
+        fvm::SuSp(-nu*180.0*sqr(alpha_)/(sqr(d_p*(1.0-alpha_))) -nu*180.0*alpha_/(100.0*d_p*(1.0-alpha_)*nu)*mag(U),U)
+        //fvm::SuSp(-0.5*mag(U),U)
 		
     );
 }

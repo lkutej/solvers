@@ -21,73 +21,79 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::pPFPorosityModels::Whitaker
+
+Description
+
+SourceFiles
+    Whitaker.C
+
 \*---------------------------------------------------------------------------*/
 
-#include "Whitaker.H"
-#include "addToRunTimeSelectionTable.H"
+#ifndef Whitaker_H
+#define Whitaker_H
 
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+#include "pPFPorosityModel.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 namespace pPFPorosityModels
 {
-    defineTypeNameAndDebug(Whitaker, 0);
-    addToRunTimeSelectionTable(pPFPorosityModel, Whitaker, dictionary);
 
+/*---------------------------------------------------------------------------*\
+                           Class Whitaker Declaration
+\*---------------------------------------------------------------------------*/
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Whitaker::Whitaker
-(
-    const volVectorField& U,
-    const volScalarField& alpha,
-    const dictionary& pPFPorosityModelDict
-)
+class Whitaker
 :
-    pPFPorosityModel(U, alpha, pPFPorosityModelDict),
-    nu("nu", dimensionSet(0, 2, -1, 0, 0, 0, 0), pPFPorosityModelDict.lookup("nu")),
-    d_p("d_p", dimensionSet(0, 1, 0, 0, 0, 0, 0), pPFPorosityModelDict.lookup("d_p"))
-
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Whitaker::~Whitaker()
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-tmp<fvVectorMatrix> Whitaker::force(volVectorField& U) const
+    public pPFPorosityModel
 {
-    volScalarField yWall = y_;
-   //dimensionedScalar dimFix("dimFix", dimless/dimLength, 1.0);
-   // volScalarField dragCoeff("dragCoeff", Cd_*pos(k_-y_)*dimFix);
- 
+private:
 
-    if(runTime_.outputTime())
-    {
-        yWall.write();
-     //  dragCoeff.write();
+    // Private data
 
-  
-    }
+        dimensionedScalar nu;
+        dimensionedScalar d_p; 
 
 
-    return
-    (
+public:
 
-	  fvm::SuSp(-nu*((180.0*sqr(alpha_))/(sqr(d_p)*(1.0-alpha_)))*(1.0+(((1.0-alpha_)*d_p)/(100.0*alpha_*nu)*mag(U))),U)  - fvm::laplacian((1.0-alpha_),U)
-      //fvm::SuSp(-0.5*mag(U),U)
-		
-    );
-}
+    //- Runtime type information
+    TypeName("Whitaker");
+
+
+    // Constructors
+
+        //- Construct from a dictionary and a phase pair
+        Whitaker
+        (
+            const volVectorField& U,
+            const volScalarField& alpha,
+            const dictionary& pPFPorosityModelDict
+        );
+
+
+    //- Destructor
+    virtual ~Whitaker();
+
+
+    // Member Functions
+
+        //- Drag coefficient
+        virtual tmp<fvVectorMatrix> force(volVectorField& U) const;
+};
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace pPFPorosityModels
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
 
 // ************************************************************************* //
