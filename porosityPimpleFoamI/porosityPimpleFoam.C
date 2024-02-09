@@ -30,18 +30,19 @@ Description
 
     Sub-models include:
     - turbulence modelling, i.e. laminar, RAS or LES
-    - run-time selectable finite volume options, e.g. MRF, explicit porosity
+    - run-time selectable finite volume options, e.g. MRF, explicit pPFPorosity
 
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
 #include "singlePhaseTransportModel.H"
-#include "turbulenceModel.H"
+#include "pPFTurbulenceModel.H"
 #include "pimpleControl.H"
 #include "fvIOoptionList.H"
 #include "IOporosityModelList.H"
 #include "IOMRFZoneList.H"
 #include "fixedFluxPressureFvPatchScalarField.H"
+#include "pPFPorosityModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
