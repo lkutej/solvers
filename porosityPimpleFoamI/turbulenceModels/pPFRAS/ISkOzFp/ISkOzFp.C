@@ -23,7 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "ISkOzF.H"
+#include "ISkOzFp.H"
 #include "addToRunTimeSelectionTable.H"
 #include "wallFvPatch.H"
 //#include "backwardsCompatibilityWallFunctions.H"
@@ -39,12 +39,12 @@ namespace pPFRASModels
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(ISkOzF, 0);
-addToRunTimeSelectionTable(pPFRASModel, ISkOzF, dictionary);
+defineTypeNameAndDebug(ISkOzFp, 0);
+addToRunTimeSelectionTable(pPFRASModel, ISkOzFp, dictionary);
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
-tmp<volScalarField> ISkOzF::Tau() const
+tmp<volScalarField> ISkOzFp::Tau() const
 {
 /*    
     volScalarField T_lb("T_lb", CTau_*sqrt(nu()/(epsilon_+epsilonMin_)));
@@ -92,7 +92,7 @@ tmp<volScalarField> ISkOzF::Tau() const
            );
 }
 
-tmp<volScalarField> ISkOzF::L() const
+tmp<volScalarField> ISkOzFp::L() const
 {
 /*
     volScalarField L_lb("L_lb", CEta_*pow( (pow(nu(),3)/(epsilon_+epsilonMin_)),0.25));
@@ -159,7 +159,7 @@ tmp<volScalarField> ISkOzF::L() const
 */
 }
 
-void ISkOzF::calculateDelta()
+void ISkOzFp::calculateDelta()
 {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~ cube root ~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
@@ -169,7 +169,7 @@ void ISkOzF::calculateDelta()
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 }
 
-void ISkOzF::writeAveragingProperties() const
+void ISkOzFp::writeAveragingProperties() const
 {
     IOdictionary propsDict
     (
@@ -191,7 +191,7 @@ void ISkOzF::writeAveragingProperties() const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-ISkOzF::ISkOzF
+ISkOzFp::ISkOzFp
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
@@ -428,6 +428,15 @@ ISkOzF::ISkOzF
             1.0
         )
     ),
+    ck_
+    (
+        dimensioned<scalar>::lookupOrAddToDict
+        (
+            "ck",
+            coeffDict_,
+            0.28
+        )
+    ),
 
     k_
     (
@@ -639,7 +648,7 @@ ISkOzF::ISkOzF
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
-tmp<volSymmTensorField> ISkOzF::R() const
+tmp<volSymmTensorField> ISkOzFp::R() const
 {
     return tmp<volSymmTensorField>
     (
@@ -660,7 +669,7 @@ tmp<volSymmTensorField> ISkOzF::R() const
 }
 
 
-tmp<volSymmTensorField> ISkOzF::devReff() const
+tmp<volSymmTensorField> ISkOzFp::devReff() const
 {
     return tmp<volSymmTensorField>
     (
@@ -680,7 +689,7 @@ tmp<volSymmTensorField> ISkOzF::devReff() const
 }
 
 
-tmp<fvVectorMatrix> ISkOzF::divDevReff(volVectorField& U) const
+tmp<fvVectorMatrix> ISkOzFp::divDevReff(volVectorField& U) const
 {
     return
     (
@@ -693,7 +702,7 @@ tmp<fvVectorMatrix> ISkOzF::divDevReff(volVectorField& U) const
     );
 }
 
-tmp<fvVectorMatrix> ISkOzF::divDevRhoReff
+tmp<fvVectorMatrix> ISkOzFp::divDevRhoReff
 (
     const volScalarField& rho,
     volVectorField& U
@@ -708,7 +717,7 @@ tmp<fvVectorMatrix> ISkOzF::divDevRhoReff
     );
 }
 
-bool ISkOzF::read()
+bool ISkOzFp::read()
 {
     if (pPFRASModel::read())
     {
@@ -737,6 +746,7 @@ bool ISkOzF::read()
         SdiffSwitch_.readIfPresent(coeffDict());
         CDtboundSwitch_.readIfPresent(coeffDict());
         Ceps1zetaSwitch_.readIfPresent(coeffDict());
+        ck_.readIfPresent(coeffDict());
 
         return true;
     }
@@ -747,7 +757,7 @@ bool ISkOzF::read()
 }
 
 
-void ISkOzF::correct()
+void ISkOzFp::correct()
 {
     pPFRASModel::correct();
 
@@ -779,9 +789,9 @@ void ISkOzF::correct()
     epsilonr_ = 0.5*tr(epsilonrTens_);
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
  
-    surfaceScalarField betaf = fvc::interpolate(beta_);
-    
-    volScalarField G("pPFRASModel::G", nut_*2*magSqr(symm(fvc::grad(U_))));
+    volScalarField G("pPFRASModel::G", 1.0/beta_*nut_*2*magSqr(symm(fvc::grad(beta_*U_))));
+    //laut de Lemos -R:grad(beta*U). Da -beta R definiert ist mit Boussinesq, hier 1/beta_.
+   
     volScalarField CEps1_ = 0.0*zeta_;
     if (Ceps1zetaSwitch_.value() == 1.0)
     {   
@@ -794,10 +804,13 @@ void ISkOzF::correct()
         Info<<"Ceps1 w/o zeta"<<endl;
     }
    
-    /* Source Term */
-    dimensionedScalar K("K", sqr(dimLength), 7.111e-6);
-    volScalarField B = neg(beta_-0.9999)*0.001*beta_*k_*mag(beta_*U_)/sqrt(K); 
-    Info<<"Source Term"<<endl;
+    /* Porosity source term */
+    dimensionedScalar dp("dp", dimLength, 0.01);
+    volScalarField K("K", pow(dp,2.0)*pow(beta_,3.0)/(180*pow(max(1.0-beta_,SMALL),2.0)));
+    //K = 0.0*K+pow(dp/0.01,2.0)*7.111111e-6;
+    volScalarField B("B", /*neg(beta_-0.9999)**/ck_*beta_*k_*mag(beta_*U_)/sqrt(K));
+    Info<<"Source term, ck = "<<ck_<<", permeability for porosity 0.8"<<endl;
+    
 
     volScalarField T_ = Tau();
     volScalarField L_ = L();
@@ -817,7 +830,6 @@ void ISkOzF::correct()
 */
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SAS TERM MIT LIMITER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-    volScalarField S2(2.0*magSqr(symm(fvc::grad(U_))));
     dimensionedScalar Psaslim("Psaslim", dimensionSet(0, 0, -2, 0, 0), 0.0);
     T2_ = 3.0*k_*max(pow(omega_,-2.0)*(fvc::grad(omega_) & fvc::grad(omega_)), pow(k_,-2.0)*(fvc::grad(k_) & fvc::grad(k_)));
     //volScalarField L("L", 1/pow(0.09, 0.25)*max(10.0*pow(pow(nu(),3.0)/(k_*omega_),0.25), sqrt(k_)/omega_));
@@ -852,20 +864,25 @@ void ISkOzF::correct()
         CD=CDv+max(CDt,dimensionedScalar("0.0", dimless/dimTime, 0.0));
         Info<<"Bounded turbulent cross diffusion"<<endl;
     }
-    
+   
+    Info<<"derivative beta terms in omegaEqn disabled"<<endl;
+ 
     // omega equation
     tmp<fvScalarMatrix> omegaEqn
     (
-        fvm::ddt(omega_)
-      + fvm::div(phi_/betaf, omega_)
-      - fvm::laplacian(DepsilonEff(), omega_)
+        fvm::ddt(beta_, omega_) //beta
+      + fvm::div(phi_, omega_)
+      - fvm::laplacian(DepsilonEff()*beta_, omega_) //beta
+      - fvc::laplacian(DepsilonEff()*omega_, beta_) //added
       ==
         (CEps1_-1.0)*G/k_*omega_
-      - fvm::SuSp((CEps2_-1.0)*omega_, omega_)
-      + (CEps2_-1.0)*omega_*B/k_
-      + fvm::Sp(CD, omega_) // Cross diffusion
-      + fvm::SuSp(SdiffSwitch_*(fvc::laplacian(DepsilonEff(), k_) - fvc::laplacian(DkEff(), k_))/k_, omega_) // Zero, if sigmaEps=sigmaK
-      + Csas_*Psas
+      - fvm::SuSp((CEps2_-1.0)*omega_*beta_, omega_) //beta
+      + fvm::SuSp((CEps2_-1.0)*B/k_, omega_) // Source term added
+      //+ fvm::SuSp(fvc::div(phi_, beta_), omega_) // Transformation term
+      //- fvc::laplacian(DkEff(), beta_)*omega_ //Transformation term
+      + fvm::Sp(beta_*CD, omega_) // Cross diffusion //beta
+      + fvm::SuSp(SdiffSwitch_*(fvc::laplacian(DepsilonEff(), k_) - fvc::laplacian(DkEff(), k_))/k_*beta_, omega_) //Zero, if sigmaEps=sigmaK //beta
+      + beta_*Csas_*Psas //beta
     );
     omegaEqn().relax();
     dimensionedScalar nu1 = nu()->internalField()[0];
@@ -903,13 +920,14 @@ void ISkOzF::correct()
     // Turbulent kinetic energy equation
     tmp<fvScalarMatrix> kEqn
     (
-        fvm::ddt(k_)
-      + fvm::div(phi_/betaf, k_)
-      - fvm::laplacian(DkEff(), k_)
+        fvm::ddt(beta_, k_) //beta
+      + fvm::div(phi_, k_)
+      - fvm::laplacian(DkEff()*beta_, k_) //beta
+      - fvc::laplacian(DkEff()*k_, beta_) //added
      ==
         G
-      - fvm::Sp(epsilon_/k_, k_)
-      + B
+      - fvm::Sp(beta_*epsilon_/k_, k_) //beta
+      + B //added
      );
 
     kEqn().relax();
@@ -926,11 +944,11 @@ void ISkOzF::correct()
         // f equation
         tmp<fvScalarMatrix> fEqn
         (
-            - fvm::laplacian(f_)
+            - fvm::laplacian(beta_,f_) //beta
          ==
-            - fvm::Sp(1.0/sqr(L_),f_)
+            - fvm::Sp(beta_/sqr(L_),f_) //beta
 //          - (C1_+C2_*G/epsilon_)*(zeta_ - 2.0/3.0)/(sqr(L_)*T_)
-            - 1.0/(sqr(L_)*T_)*C1_*(zeta_-2.0/3.0) 
+            - beta_/(sqr(L_)*T_)*C1_*(zeta_-2.0/3.0) //beta
             - 1.0/(sqr(L_)*T_)*C2_*G/epsilon_*(zeta_-2.0/3.0)
             + fEqnPbykSwitch_ * 1.0/sqr(L_)*2.0/3.0*G/k_
         );
@@ -945,12 +963,13 @@ void ISkOzF::correct()
         // zeta equation
         tmp<fvScalarMatrix> zetaEqn
         (
-            fvm::ddt(zeta_)
-          + fvm::div(phi_/betaf, zeta_)
-          - fvm::laplacian(DzetaEff(), zeta_)
+            fvm::ddt(beta_, zeta_) //beta
+          + fvm::div(phi_, zeta_)
+          - fvm::laplacian(DzetaEff()*beta_, zeta_) //beta
+          - fvc::laplacian(DzetaEff()*zeta_, beta_) //added
          ==
-            fTilda
-          - fvm::Sp(G/(k_), zeta_)
+            beta_*fTilda //beta
+          - fvm::Sp(G/k_, zeta_)
         );
 
         zetaEqn().relax();
@@ -968,15 +987,15 @@ void ISkOzF::correct()
         // f equation
         tmp<fvScalarMatrix> fEqn
         (
-            - fvm::laplacian(f_)
+            - fvm::laplacian(beta_, f_) //beta
          ==
-            - fvm::Sp(1.0/sqr(L_),f_)
+            - fvm::Sp(beta_/sqr(L_),f_) //beta
 //          - (C1_+(C2_*G/(epsilon_)))*((zeta_ - 2.0/3.0))/(sqr(L_)*T_)
-            - 1.0/(sqr(L_)*T_)*C1_*(zeta_-2.0/3.0)  
+            - beta_/(sqr(L_)*T_)*C1_*(zeta_-2.0/3.0) //beta
             - 1.0/(sqr(L_)*T_)*C2_*G/epsilon_*(zeta_-2.0/3.0)
             + fEqnPbykSwitch_ * 1.0/sqr(L_)*2.0/3.0*G/k_
         );
-        
+
         fEqn().relax();
         #include "BoundaryConditionf.H"
         solve(fEqn);
@@ -984,13 +1003,14 @@ void ISkOzF::correct()
         // zeta equation
         tmp<fvScalarMatrix> zetaEqn
         (
-            fvm::ddt(zeta_)
-          + fvm::div(phi_/betaf, zeta_)
-          - fvm::laplacian(DzetaEff(), zeta_)
+            fvm::ddt(beta_,zeta_) //beta
+          + fvm::div(phi_, zeta_)
+          - fvm::laplacian(DzetaEff()*beta_, zeta_) //beta
+          - fvc::laplacian(DzetaEff()*zeta_, beta_) //added
          ==
 //            min(f_, (C1_+(C2_*G/(epsilon_)))*((zeta_ - 2.0/3.0))/T_)
-            f_
-          - fvm::Sp(G/(k_), zeta_)
+            beta_*f_ //beta
+          - fvm::Sp(G/k_, zeta_)
         );
 
         zetaEqn().relax();
@@ -1025,6 +1045,8 @@ void ISkOzF::correct()
         Psas.write();
         writeAveragingProperties();
         ISlim.write();
+        B.write();
+        K.write();
     }
 }
 
