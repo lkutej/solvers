@@ -34,13 +34,13 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace RASModels
+namespace pPFRASModels
 {
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 defineTypeNameAndDebug(VLES, 0);
-addToRunTimeSelectionTable(RASModel, VLES, dictionary);
+addToRunTimeSelectionTable(pPFRASModel, VLES, dictionary);
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
@@ -288,12 +288,13 @@ VLES::VLES
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
-    const word& turbulenceModelName,
+    const word& pPFTurbulenceModelName,
     const word& modelName
 )
 :
-    RASModel(modelName, U, phi, transport, turbulenceModelName),
+    pPFRASModel(modelName, U, phi, beta, transport, pPFTurbulenceModelName),
 
     Cmu_
     (
@@ -590,9 +591,20 @@ tmp<fvVectorMatrix> VLES::divDevReff(volVectorField& U) const
 {
     return
     (
-      - fvm::laplacian(nuEff(), U)
-      - fvc::div(nuEff()*dev(fvc::grad(U)().T()))
+        -1.0/beta_*
+        (
+            fvm::laplacian(nut_*beta_, U)
+          + fvc::div(nut_*U*fvc::grad(beta_))
+          + fvc::div(nut_*dev2(T(fvc::grad(beta_*U))))
+        )
     );
+/*
+    return
+    (
+      - fvm::laplacian(nut_, U)
+      - fvc::div(nut_*dev2(fvc::grad(U)().T()))
+    );
+*/
 }
 
 tmp<fvVectorMatrix> VLES::divDevRhoReff
@@ -612,7 +624,7 @@ tmp<fvVectorMatrix> VLES::divDevRhoReff
 
 bool VLES::read()
 {
-    if (RASModel::read())
+    if (pPFRASModel::read())
     {
         Cmu_.readIfPresent(coeffDict());
         CEps2_.readIfPresent(coeffDict());
@@ -639,14 +651,15 @@ bool VLES::read()
 
 void VLES::correct()
 {
-    RASModel::correct();
+    pPFRASModel::correct();
 
     if (!turbulence_)
     {
         return;
     }
+    surfaceScalarField betaf = fvc::interpolate(beta_);    
 
-    volScalarField G("RASModel::G", nut_ * 2 * magSqr(symm(fvc::grad(U_))));
+    volScalarField G("pPFRASModel::G", nut_ * 2 * magSqr(symm(fvc::grad(U_))));
     //volScalarField CEps1_ = 1.4*(1.0+(0.012/zeta_));
     volScalarField CEps1_ = 1.4*(1.0+0.045/sqrt(zeta_)); 
     
@@ -669,7 +682,7 @@ void VLES::correct()
     tmp<fvScalarMatrix> epsEqn
     (
         fvm::ddt(epsilon_)
-      + fvm::div(phi_, epsilon_)
+      + fvm::div(phi_/betaf, epsilon_, "div(phi,epsilon)")
       - fvm::laplacian(DepsilonEff(), epsilon_)
      ==
         CEps1_*G/T_
@@ -692,7 +705,7 @@ void VLES::correct()
     tmp<fvScalarMatrix> kEqn
     (
         fvm::ddt(k_)
-      + fvm::div(phi_, k_)
+      + fvm::div(phi_/betaf, k_, "div(phi,k)")
       - fvm::laplacian(DkEff(), k_)
      ==
         G
@@ -727,7 +740,7 @@ void VLES::correct()
     tmp<fvScalarMatrix> zetaEqn
     (
         fvm::ddt(zeta_)
-      + fvm::div(phi_, zeta_)
+      + fvm::div(phi_/betaf, zeta_,"div(phi,zeta)")
       - fvm::laplacian(DzetaEff(), zeta_)
      ==
 //      f_
@@ -774,7 +787,7 @@ void VLES::correct()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace RASModels
+} // End namespace pPFRASModels
 } // End namespace incompressible
 } // End namespace Foam
 
