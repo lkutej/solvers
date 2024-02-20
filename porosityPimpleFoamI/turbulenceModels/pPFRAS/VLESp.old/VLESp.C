@@ -413,15 +413,6 @@ VLESp::VLESp
             1.0
         )
     ),
-    ck_
-    (
-        dimensioned<scalar>::lookupOrAddToDict
-        (
-            "ck",
-            coeffDict_,
-            0.28
-        )
-    ),
 
     k_
     (
@@ -607,11 +598,13 @@ tmp<fvVectorMatrix> VLESp::divDevReff(volVectorField& U) const
           + fvc::div(nut_*dev2(T(fvc::grad(beta_*U))))
         )
     );
+
 /*
     return
     (
-      - fvm::laplacian(nut_, U)
-      - fvc::div(nut_*dev2(fvc::grad(U)().T()))
+      - fvm::laplacian(beta_*nuEff(), U)
+      - fvc::div(nuEff()*U*fvc::grad(beta_)) //transponieren?
+      - fvc::div(nuEff()*dev2(fvc::grad(beta_*U)().T()))
     );
 */
 }
@@ -667,17 +660,18 @@ void VLESp::correct()
         return;
     }
 
-    volScalarField G("pPFRASModel::G", 1.0/beta_*nut_*2*magSqr(symm(fvc::grad(beta_*U_))));
-    //laut de Lemos -R:grad(beta*U). Da -beta R definiert ist mit Boussinesq, hier 1/beta_.
-
+    volScalarField G("pPFRASModel::G", nut_ * 2 * magSqr(symm(fvc::grad(beta_*U_))));
+    //volScalarField CEps1_ = 1.4*(1.0+(0.012/zeta_));
     volScalarField CEps1_ = 1.4*(1.0+0.045/sqrt(zeta_)); 
-
-    /* Porosity source term */
-    dimensionedScalar dp("dp", dimLength, 0.01);
-    volScalarField K("K", pow(dp,2.0)*pow(beta_,3.0)/(180*pow(max(1.0-beta_,SMALL),2.0)));
-    //K = 0.0*K+pow(dp/0.01,2.0)*7.111111e-6;
-    volScalarField B("B", /*neg(beta_-0.9999)**/ck_*beta_*k_*mag(beta_*U_)/sqrt(K));
-    Info<<"Source term, ck = "<<ck_<<", permeability for porosity 0.8"<<endl;    
+    
+    /* 
+    //~~~~~~~~~~~~~ update length and time scale ~~~~~~~~~~~~~
+    Tt_ = k_/epsilon_;
+    Tk_ = CTau_*sqrt(nu()/epsilon_);
+    Lt_ = CL_ * pow(k_,1.5)/epsilon_;
+    Lk_ = CL_ * CEta_*pow(pow(nu(),3)/epsilon_,0.25);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    */    
 
     volScalarField T_ = Tau();// + TscMin_;
     volScalarField L_ = L();// + LscMin_;
@@ -688,14 +682,12 @@ void VLESp::correct()
     // Dissipation equation
     tmp<fvScalarMatrix> epsEqn
     (
-        fvm::ddt(beta_, epsilon_) //beta
-      + fvm::div(phi_, epsilon_)
-      - fvm::laplacian(DepsilonEff()*beta_, epsilon_) //beta
-      - fvc::laplacian(DepsilonEff()*epsilon_, beta_) //added
+        fvm::ddt(beta_, epsilon_)                      // beta_ hinzugefuegt
+      + fvm::div(phi_, epsilon_, "div(phi,epsilon)")   // beta_ in phi_
+      - fvm::laplacian(DepsilonEff(), epsilon_)
      ==
-        CEps1_*G/T_
-      - fvm::Sp(CEps2_/T_*beta_, epsilon_) //beta
-      + fvm::SuSp(CEps2_*B/k_, epsilon_) //Source term added
+        CEps1_*G/T_                                    // beta_ in G
+      - fvm::Sp(beta_*CEps2_/T_, epsilon_)             // beta_ hinzugefuegt
 /*
         CEps1_*G*epsilon_/k_
       - fvm::Sp(CEps2_*epsilon_/k_, epsilon_)
@@ -713,14 +705,12 @@ void VLESp::correct()
     // Turbulent kinetic energy equation
     tmp<fvScalarMatrix> kEqn
     (
-        fvm::ddt(beta_,k_) //beta
-      + fvm::div(phi_, k_)
-      - fvm::laplacian(DkEff()*beta_, k_) //beta
-      - fvc::laplacian(DkEff()*k_, beta_) //added
+        fvm::ddt(beta_, k_)                 // beta_ hinzugefuegt
+      + fvm::div(phi_, k_, "div(phi,k)")    // beta_ in phi_
+      - fvm::laplacian(DkEff(), k_)
      ==
-        G
-      - fvm::Sp(epsilon_/k_*beta_, k_) //beta
-      + B
+        G                                   // beta_ in G
+      - fvm::Sp(beta_*epsilon_/k_, k_)      // beta_ hinzugefuegt
     );
 
     kEqn().relax();
@@ -731,10 +721,10 @@ void VLESp::correct()
     // f equation
     tmp<fvScalarMatrix> fEqn
     (
-        - fvm::laplacian(beta_,f_) //beta
+        - fvm::laplacian(f_)
      ==
-        - fvm::Sp(beta_/sqr(L_),f_) //beta
-        - (beta_*C1_+C2_*G/epsilon_)*(zeta_ - 2.0/3.0)/(sqr(L_)*T_) //beta
+        - fvm::Sp(1.0/sqr(L_),f_)
+        - (C1_+C2_*G/epsilon_)*(zeta_ - 2.0/3.0)/(sqr(L_)*T_)
 //        - (C1_+C2_*G/epsilon_)*(zeta_ - 2.0/3.0)/(sqr(L_)*k_/epsilon_)
     );
     
@@ -750,14 +740,13 @@ void VLESp::correct()
     // Zeta equation
     tmp<fvScalarMatrix> zetaEqn
     (
-        fvm::ddt(beta_, zeta_) //beta
-      + fvm::div(phi_, zeta_)
-      - fvm::laplacian(DzetaEff()*beta_, zeta_)
-      - fvc::laplacian(DzetaEff()*zeta_, beta_)
+        fvm::ddt(beta_, zeta_)                   // beta_ hinzugefuegt
+      + fvm::div(phi_, zeta_,"div(phi,zeta)")    // beta_ in phi_
+      - fvm::laplacian(DzetaEff(), zeta_)
      ==
 //      f_
-        beta_*fTilda
-      - fvm::Sp(G/k_, zeta_)
+        beta_*fTilda                             // beta_ hinzugefuegt
+      - fvm::Sp(G/(k_), zeta_)                   // beta_ in G
     );
 
     zetaEqn().relax();
@@ -793,8 +782,6 @@ void VLESp::correct()
         omega.write();
         volScalarField LvK("LvK", 0.41*sqrt(2.0*magSqr(symm(fvc::grad(U_))))/(mag(fvc::laplacian(U_))));
         LvK.write();
-        B.write();
-        K.write();
     }
 }
 
