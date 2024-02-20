@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::incompressible::RASModels::kOzFp
+    Foam::incompressible::RASModels::kOzFp2
 
 Description
     Zeta-effe turbulence model for incompressible flows.
@@ -34,7 +34,7 @@ Description
 
     The default model coefficients correspond to the following:
     \verbatim
-        kOzFpCoeffs
+        kOzFp2Coeffs
         {
              Cmu_         0.22,
              CEps2_       1.90,
@@ -50,12 +50,12 @@ Description
     \endverbatim
 
 SourceFiles
-    kOzFp.C
+    kOzFp2.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef kOzFp_H
-#define kOzFp_H
+#ifndef kOzFp2_H
+#define kOzFp2_H
 
 #include "pPFRASModel.H"
 #include "wallDistReflection.H"
@@ -69,10 +69,10 @@ namespace pPFRASModels
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class kOzFp Declaration
+                           Class kOzFp2 Declaration
 \*---------------------------------------------------------------------------*/
 
-class kOzFp
+class kOzFp2
 :
     public pPFRASModel
 {
@@ -150,12 +150,12 @@ protected:
 public:
 
     //- Runtime type information
-    TypeName("kOzFp");
+    TypeName("kOzFp2");
 
     // Constructors
 
         //- Construct from components
-        kOzFp
+        kOzFp2
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
@@ -167,7 +167,7 @@ public:
 
 
     //- Destructor
-    virtual ~kOzFp()
+    virtual ~kOzFp2()
     {}
 
 
