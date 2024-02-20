@@ -1,0 +1,6 @@
+pPFLESModel/pPFLESModel.C
+pPFGenEddyVisc/pPFGenEddyVisc.C
+pPFSmagorinsky/pPFSmagorinsky.C
+dynamicSmagorinsky/dynamicSmagorinsky.C
+
+LIB = $(FOAM_USER_LIBBIN)/libpPFincompressibleLESModelsI
