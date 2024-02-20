@@ -23,7 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "ISkOzFp.H"
+#include "ISkOzFpSource.H"
 #include "addToRunTimeSelectionTable.H"
 #include "wallFvPatch.H"
 //#include "backwardsCompatibilityWallFunctions.H"
@@ -39,12 +39,12 @@ namespace pPFRASModels
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(ISkOzFp, 0);
-addToRunTimeSelectionTable(pPFRASModel, ISkOzFp, dictionary);
+defineTypeNameAndDebug(ISkOzFpSource, 0);
+addToRunTimeSelectionTable(pPFRASModel, ISkOzFpSource, dictionary);
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
-tmp<volScalarField> ISkOzFp::Tau() const
+tmp<volScalarField> ISkOzFpSource::Tau() const
 {
 /*    
     volScalarField T_lb("T_lb", CTau_*sqrt(nu()/(epsilon_+epsilonMin_)));
@@ -92,7 +92,7 @@ tmp<volScalarField> ISkOzFp::Tau() const
            );
 }
 
-tmp<volScalarField> ISkOzFp::L() const
+tmp<volScalarField> ISkOzFpSource::L() const
 {
 /*
     volScalarField L_lb("L_lb", CEta_*pow( (pow(nu(),3)/(epsilon_+epsilonMin_)),0.25));
@@ -159,7 +159,7 @@ tmp<volScalarField> ISkOzFp::L() const
 */
 }
 
-void ISkOzFp::calculateDelta()
+void ISkOzFpSource::calculateDelta()
 {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~ cube root ~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
@@ -169,7 +169,7 @@ void ISkOzFp::calculateDelta()
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 }
 
-void ISkOzFp::writeAveragingProperties() const
+void ISkOzFpSource::writeAveragingProperties() const
 {
     IOdictionary propsDict
     (
@@ -191,7 +191,7 @@ void ISkOzFp::writeAveragingProperties() const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-ISkOzFp::ISkOzFp
+ISkOzFpSource::ISkOzFpSource
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
@@ -437,6 +437,16 @@ ISkOzFp::ISkOzFp
             0.28
         )
     ),
+    co_
+    (
+        dimensioned<scalar>::lookupOrAddToDict
+        (
+            "co",
+            coeffDict_,
+            1.0
+        )
+    ),
+
 
     k_
     (
@@ -648,7 +658,7 @@ ISkOzFp::ISkOzFp
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
-tmp<volSymmTensorField> ISkOzFp::R() const
+tmp<volSymmTensorField> ISkOzFpSource::R() const
 {
     return tmp<volSymmTensorField>
     (
@@ -669,7 +679,7 @@ tmp<volSymmTensorField> ISkOzFp::R() const
 }
 
 
-tmp<volSymmTensorField> ISkOzFp::devReff() const
+tmp<volSymmTensorField> ISkOzFpSource::devReff() const
 {
     return tmp<volSymmTensorField>
     (
@@ -689,7 +699,7 @@ tmp<volSymmTensorField> ISkOzFp::devReff() const
 }
 
 
-tmp<fvVectorMatrix> ISkOzFp::divDevReff(volVectorField& U) const
+tmp<fvVectorMatrix> ISkOzFpSource::divDevReff(volVectorField& U) const
 {
     return
     (
@@ -702,7 +712,7 @@ tmp<fvVectorMatrix> ISkOzFp::divDevReff(volVectorField& U) const
     );
 }
 
-tmp<fvVectorMatrix> ISkOzFp::divDevRhoReff
+tmp<fvVectorMatrix> ISkOzFpSource::divDevRhoReff
 (
     const volScalarField& rho,
     volVectorField& U
@@ -717,7 +727,7 @@ tmp<fvVectorMatrix> ISkOzFp::divDevRhoReff
     );
 }
 
-bool ISkOzFp::read()
+bool ISkOzFpSource::read()
 {
     if (pPFRASModel::read())
     {
@@ -757,7 +767,7 @@ bool ISkOzFp::read()
 }
 
 
-void ISkOzFp::correct()
+void ISkOzFpSource::correct()
 {
     pPFRASModel::correct();
 
@@ -807,9 +817,8 @@ void ISkOzFp::correct()
     /* Porosity source term */
     dimensionedScalar dp("dp", dimLength, 0.01);
     volScalarField K("K", pow(dp,2.0)*pow(beta_,3.0)/(180*pow(max(1.0-beta_,SMALL),2.0)));
-    //K = 0.0*K+pow(dp/0.01,2.0)*7.111111e-6;
-    volScalarField B("B", /*neg(beta_-0.9999)**/ck_*beta_*k_*mag(beta_*U_)/sqrt(K));
-    Info<<"Source term, ck = "<<ck_<<", permeability for porosity 0.8"<<endl;
+    volScalarField F("F", beta_*dp/(100.0*max(1.0-beta_,SMALL))); //eigentlich noch 1/nu() fuer Ftilda
+    Info<<"Source term deLemos"<<endl;
     
 
     volScalarField T_ = Tau();
@@ -877,12 +886,10 @@ void ISkOzFp::correct()
       ==
         (CEps1_-1.0)*G/k_*omega_
       - fvm::SuSp((CEps2_-1.0)*omega_*beta_, omega_) //beta
-      + fvm::SuSp((CEps2_-1.0)*B/k_, omega_) // Source term added
-      //+ fvm::SuSp(fvc::div(phi_, beta_), omega_) // Transformation term
-      //- fvc::laplacian(DkEff(), beta_)*omega_ //Transformation term
       + fvm::Sp(beta_*CD, omega_) // Cross diffusion //beta
       + fvm::SuSp(SdiffSwitch_*(fvc::laplacian(DepsilonEff(), k_) - fvc::laplacian(DkEff(), k_))/k_*beta_, omega_) //Zero, if sigmaEps=sigmaK //beta
       + beta_*Csas_*Psas //beta
+      + fvm::SuSp(co_*beta_*mag(beta_*U_)/sqrt(K), omega_) //deLemosSource
     );
     omegaEqn().relax();
     dimensionedScalar nu1 = nu()->internalField()[0];
@@ -927,7 +934,7 @@ void ISkOzFp::correct()
      ==
         G
       - fvm::Sp(beta_*epsilon_/k_, k_) //beta
-      + B //added
+      + ck_*beta_*mag(beta_*U_)/sqrt(K)*k_ //deLemosSource
      );
 
     kEqn().relax();
@@ -1045,8 +1052,6 @@ void ISkOzFp::correct()
         Psas.write();
         writeAveragingProperties();
         ISlim.write();
-        B.write();
-        K.write();
     }
 }
 
