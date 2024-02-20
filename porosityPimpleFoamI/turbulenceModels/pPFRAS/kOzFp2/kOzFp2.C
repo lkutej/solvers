@@ -23,7 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "kOzFp.H"
+#include "kOzFp2.H"
 #include "addToRunTimeSelectionTable.H"
 #include "wallFvPatch.H"
 //#include "backwardsCompatibilityWallFunctions.H"
@@ -39,12 +39,12 @@ namespace pPFRASModels
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(kOzFp, 0);
-addToRunTimeSelectionTable(pPFRASModel, kOzFp, dictionary);
+defineTypeNameAndDebug(kOzFp2, 0);
+addToRunTimeSelectionTable(pPFRASModel, kOzFp2, dictionary);
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
-tmp<volScalarField> kOzFp::Tau() const
+tmp<volScalarField> kOzFp2::Tau() const
 {
 /*    
     volScalarField T_lb("T_lb", CTau_*sqrt(nu()/(epsilon_+epsilonMin_)));
@@ -92,7 +92,7 @@ tmp<volScalarField> kOzFp::Tau() const
            );
 }
 
-tmp<volScalarField> kOzFp::L() const
+tmp<volScalarField> kOzFp2::L() const
 {
 /*
     volScalarField L_lb("L_lb", CEta_*pow( (pow(nu(),3)/(epsilon_+epsilonMin_)),0.25));
@@ -159,7 +159,7 @@ tmp<volScalarField> kOzFp::L() const
 */
 }
 
-void kOzFp::calculateDelta()
+void kOzFp2::calculateDelta()
 {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~ cube root ~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
@@ -169,7 +169,7 @@ void kOzFp::calculateDelta()
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 }
 
-void kOzFp::writeAveragingProperties() const
+void kOzFp2::writeAveragingProperties() const
 {
     IOdictionary propsDict
     (
@@ -191,7 +191,7 @@ void kOzFp::writeAveragingProperties() const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-kOzFp::kOzFp
+kOzFp2::kOzFp2
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
@@ -658,7 +658,7 @@ kOzFp::kOzFp
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
-tmp<volSymmTensorField> kOzFp::R() const
+tmp<volSymmTensorField> kOzFp2::R() const
 {
     return tmp<volSymmTensorField>
     (
@@ -679,7 +679,7 @@ tmp<volSymmTensorField> kOzFp::R() const
 }
 
 
-tmp<volSymmTensorField> kOzFp::devReff() const
+tmp<volSymmTensorField> kOzFp2::devReff() const
 {
     return tmp<volSymmTensorField>
     (
@@ -699,7 +699,7 @@ tmp<volSymmTensorField> kOzFp::devReff() const
 }
 
 
-tmp<fvVectorMatrix> kOzFp::divDevReff(volVectorField& U) const
+tmp<fvVectorMatrix> kOzFp2::divDevReff(volVectorField& U) const
 {
     return
     (
@@ -712,7 +712,7 @@ tmp<fvVectorMatrix> kOzFp::divDevReff(volVectorField& U) const
     );
 }
 
-tmp<fvVectorMatrix> kOzFp::divDevRhoReff
+tmp<fvVectorMatrix> kOzFp2::divDevRhoReff
 (
     const volScalarField& rho,
     volVectorField& U
@@ -727,7 +727,7 @@ tmp<fvVectorMatrix> kOzFp::divDevRhoReff
     );
 }
 
-bool kOzFp::read()
+bool kOzFp2::read()
 {
     if (pPFRASModel::read())
     {
@@ -768,7 +768,7 @@ bool kOzFp::read()
 }
 
 
-void kOzFp::correct()
+void kOzFp2::correct()
 {
     pPFRASModel::correct();
 
@@ -819,22 +819,7 @@ void kOzFp::correct()
     dimensionedScalar dp("dp", dimLength, 0.01);
     volScalarField K("K", pow(dp,2.0)*pow(beta_,3.0)/(180*pow(max(1.0-beta_,SMALL),2.0)));
     volScalarField F("F", beta_*dp/(100.0*max(1.0-beta_,SMALL))); //eigentlich noch 1/nu() fuer Ftilda
-    //volScalarField B("B", ck_*beta_*k_*mag(beta_*U_)/sqrt(K)); //deLemos
-    //volScalarField B("B", -2.0*beta_*(nu()/K+F/K*mag(U_))); //Lee
-    //volScalarField kInf("kInf", pos(1.0-beta_-SMALL)*3.7*(1.0-beta_)*pow(beta_,1.5)*pow(mag(U_),2.0));
-    //volScalarField epsInf("epsInf", pos(1.0-beta_-SMALL)*39.0*sqr(beta_)*pow(1.0-beta_,2.5)*1.0/dp*pow(mag(U_),3.0));
     Info<<"Source term deLemos"<<endl;
-    if(runTime_.outputTime())
-    {
-        //epsInf.write();
-        //kInf.write();
-        //dimSwitch.write();
-        //K.write();
-        //B.write();
-    }
-
-    dimensionedScalar dimFix("dimFix", dimensionSet(0,-1,0,0,0,0,0), 1.0);
-    volScalarField  dimSwitch("dimSwitch", pos(1.0-beta_-SMALL)*dimFix);
 
     volScalarField T_ = Tau();
     volScalarField L_ = L();
@@ -861,12 +846,6 @@ void kOzFp::correct()
         (CEps1_-1.0)*G/k_*omega_
       - fvm::SuSp((CEps2_-1.0)*omega_*beta_, omega_) //beta
       + fvm::SuSp(co_*beta_*mag(beta_*U_)/sqrt(K), omega_) //deLemosSource
-//    + fvm::SuSp((CEps2_-1.0)*co_*beta_*mag(U_)*F/K, omega_) //deLemosSourceFK
-//    + fvm::SuSp((CEps2_-1.0)*co_*mag(U_)*dimSwitch, omega_) //deLemosSourceCali
-//    + fvm::SuSp(-2.0*co_*beta_*(nu()/K+F/K*mag(U_)), omega_) //LeeSource
-//    + beta_/k_*(3.0*CEps2_*sqr(epsInf)/max(kInf,kMin_)-epsInf*omega_) //NakayamaSource
-//    + fvm::SuSp(fvc::div(phi_, beta_), omega_) //Transformation term
-//    - fvc::laplacian(DkEff(), beta_)*omega_ //Transformation term
       + fvm::Sp(beta_*CD, omega_) // Cross diffusion //beta
       + fvm::SuSp(SdiffSwitch_*(fvc::laplacian(DepsilonEff(), k_) - fvc::laplacian(DkEff(), k_))/k_*beta_, omega_) //Zero, if sigmaEps=sigmaK //beta
     );
@@ -914,10 +893,6 @@ void kOzFp::correct()
         G
       - fvm::Sp(beta_*epsilon_/k_, k_) //beta
       + ck_*beta_*mag(beta_*U_)/sqrt(K)*k_ //deLemosSource
-//    + ck_*beta_*mag(U_)*F/K*k_ //deLemosSourceFK
-//    + ck_*mag(U_)*dimSwitch*k_ //deLemosSourceFK
-//    - 2.0*beta_*(nu()/K+ck_*F/K*mag(U_))*k_ //LeeSource
-//    + beta_*epsInf //NakayamaSource
      );
 
     kEqn().relax();
