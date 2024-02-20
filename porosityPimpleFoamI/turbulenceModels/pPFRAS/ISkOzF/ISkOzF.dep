@@ -1,8 +1,8 @@
 $(OBJECTS_DIR)/ISkOzF.o: ISkOzF/ISkOzF.dep
 ISkOzF/ISkOzF.dep: ISkOzF/ISkOzF.C
 ISkOzF/ISkOzF.dep: ISkOzF/ISkOzF.H
-ISkOzF/ISkOzF.dep: $(WM_PROJECT_DIR)/src/turbulenceModels/incompressible/RAS/RASModel/RASModel.H
-ISkOzF/ISkOzF.dep: $(WM_PROJECT_DIR)/src/turbulenceModels/incompressible/turbulenceModel/turbulenceModel.H
+ISkOzF/ISkOzF.dep: lnInclude/pPFRASModel.H
+ISkOzF/ISkOzF.dep: ../pPFTurbulenceModel/pPFTurbulenceModel.H
 ISkOzF/ISkOzF.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/primitiveFieldsFwd.H
 ISkOzF/ISkOzF.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/fieldTypes.H
 ISkOzF/ISkOzF.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/label.H
