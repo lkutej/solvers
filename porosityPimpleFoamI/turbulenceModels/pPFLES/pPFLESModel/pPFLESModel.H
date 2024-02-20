@@ -22,40 +22,40 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Namespace
-    Foam::compressible::LESModels
+    Foam::incompressible::pPFLESModels
 
 Group
-    grpCmpLESTurbulence
+    grpIcoLESTurbulence
 
 Description
-    Namespace for compressible LES models.
+    Namespace for incompressible LES models.
 
 Class
-    Foam::compressible::LESModel
+    Foam::incompressible::pPFLESModel
 
 Description
-    Base class for all compressible flow LES SGS models.
+    Base class for all incompressible flow LES SGS models.
 
-    This class defines the basic interface for a compressible flow SGS
+    This class defines the basic interface for an incompressible flow SGS
     model, and encapsulates data of value to all possible models.
     In particular this includes references to all the dependent fields
-    (rho, U, phi), the physical viscosity mu, and the LESProperties
+    (U, phi), the physical viscosity nu, and the LESProperties
     dictionary, which contains the model selection and model coefficients.
 
 SourceFiles
-    LESModel.C
+    pPFLESModel.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef compressibleLESModel_H
-#define compressibleLESModel_H
+#ifndef incompressiblepPFLESModel_H
+#define incompressiblepPFLESModel_H
 
-#include "compressible/turbulenceModel/turbulenceModel.H"
-#include "compressible/LES/compressibleLESdelta/compressibleLESdelta.H"
+#include "../pPFTurbulenceModel/pPFTurbulenceModel.H"
+#include "incompressible/LES/incompressibleLESdelta/incompressibleLESdelta.H"
 #include "fvm.H"
 #include "fvc.H"
 #include "fvMatrices.H"
-#include "fluidThermo.H"
+#include "incompressible/transportModel/transportModel.H"
 #include "bound.H"
 #include "autoPtr.H"
 #include "runTimeSelectionTables.H"
@@ -64,16 +64,16 @@ SourceFiles
 
 namespace Foam
 {
-namespace compressible
+namespace incompressible
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class LESModel Declaration
+                           Class pPFLESModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class LESModel
+class pPFLESModel
 :
-    public turbulenceModel,
+    public pPFTurbulenceModel,
     public IOdictionary
 {
 
@@ -100,16 +100,16 @@ private:
     // Private Member Functions
 
         //- Disallow default bitwise copy construct
-        LESModel(const LESModel&);
+        pPFLESModel(const pPFLESModel&);
 
         //- Disallow default bitwise assignment
-        LESModel& operator=(const LESModel&);
+        pPFLESModel& operator=(const pPFLESModel&);
 
 
 public:
 
     //- Runtime type information
-    TypeName("LESModel");
+    TypeName("pPFLESModel");
 
 
     // Declare run-time constructor selection table
@@ -117,48 +117,48 @@ public:
         declareRunTimeSelectionTable
         (
             autoPtr,
-            LESModel,
+            pPFLESModel,
             dictionary,
             (
-                const volScalarField& rho,
                 const volVectorField& U,
                 const surfaceScalarField& phi,
-                const fluidThermo& thermoPhysicalModel,
-                const word& turbulenceModelName
+                const volScalarField& beta,
+                transportModel& transport,
+                const word& pPFTurbulenceModelName
             ),
-            (rho, U, phi, thermoPhysicalModel, turbulenceModelName)
+            (U, phi, beta, transport, pPFTurbulenceModelName)
         );
 
 
     // Constructors
 
         //- Construct from components
-        LESModel
+        pPFLESModel
         (
             const word& type,
-            const volScalarField& rho,
             const volVectorField& U,
             const surfaceScalarField& phi,
-            const fluidThermo& thermoPhysicalModel,
-            const word& turbulenceModelName = turbulenceModel::typeName
+            const volScalarField& beta,
+            transportModel& transport,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName
         );
 
 
     // Selectors
 
         //- Return a reference to the selected LES model
-        static autoPtr<LESModel> New
+        static autoPtr<pPFLESModel> New
         (
-            const volScalarField& rho,
             const volVectorField& U,
             const surfaceScalarField& phi,
-            const fluidThermo& thermoPhysicalModel,
-            const word& turbulenceModelName = turbulenceModel::typeName
+            const volScalarField& beta,
+            transportModel& transport,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName
         );
 
 
     //- Destructor
-    virtual ~LESModel()
+    virtual ~pPFLESModel()
     {}
 
 
@@ -187,95 +187,40 @@ public:
             }
 
             //- Access function to filter width
-            inline const volScalarField& delta() const
+            virtual const volScalarField& delta() const
             {
                 return delta_();
             }
 
 
-        //- Return the SGS turbulent viscosity
-        virtual tmp<volScalarField> muSgs() const = 0;
+        //- Return the SGS viscosity.
+        virtual tmp<volScalarField> nuSgs() const = 0;
 
         //- Return the effective viscosity
-        virtual tmp<volScalarField> muEff() const
+        virtual tmp<volScalarField> nuEff() const
         {
             return tmp<volScalarField>
             (
-                new volScalarField("muEff", muSgs() + mu())
+                new volScalarField("nuEff", nuSgs() + nu())
             );
-        }
-
-        //- Return the SGS turbulent thermal diffusivity
-        virtual tmp<volScalarField> alphaSgs() const = 0;
-
-        //- Return the effective turbulent temperature diffusivity
-        virtual tmp<volScalarField> kappaEff() const
-        {
-            return thermo().kappaEff(alphaSgs());
-        }
-
-        //- Return the effective turbulent temperature diffusivity for a patch
-        virtual tmp<scalarField> kappaEff(const label patchI) const
-        {
-            return
-                thermo().kappaEff(alphaSgs()().boundaryField()[patchI], patchI);
-        }
-
-        //- Return the effective thermal diffusivity
-        virtual tmp<volScalarField> alphaEff() const
-        {
-            return thermo().alphaEff(alphaSgs());
-        }
-
-        //- Return the effective turbulence thermal diffusivity for a patch
-        virtual tmp<scalarField> alphaEff(const label patchI) const
-        {
-            return
-                thermo().alphaEff(alphaSgs()().boundaryField()[patchI], patchI);
         }
 
         //- Return the sub-grid stress tensor.
         virtual tmp<volSymmTensorField> B() const = 0;
 
-        //- Return the deviatoric part of the effective sub-grid
-        //  turbulence stress tensor including the laminar stress
-        virtual tmp<volSymmTensorField> devRhoBeff() const = 0;
 
-        //- Returns div(rho*dev(B)).
-        // This is the additional term due to the filtering of the NSE.
-        virtual tmp<fvVectorMatrix> divDevRhoBeff(volVectorField& U) const = 0;
-
-
-        // RAS compatibility functions for the turbulenceModel base class
+        // RAS compatibility functions for the pPFTurbulenceModel base class
 
             //- Return the turbulence viscosity
-            virtual tmp<volScalarField> mut() const
+            virtual tmp<volScalarField> nut() const
             {
-                return muSgs();
-            }
-
-            //- Return the turbulence thermal diffusivity
-            virtual tmp<volScalarField> alphat() const
-            {
-                return alphaSgs();
+                return nuSgs();
             }
 
             //- Return the Reynolds stress tensor
             virtual tmp<volSymmTensorField> R() const
             {
                 return B();
-            }
-
-            //- Return the effective stress tensor including the laminar stress
-            virtual tmp<volSymmTensorField> devRhoReff() const
-            {
-                return devRhoBeff();
-            }
-
-            //- Return the source term for the momentum equation
-            virtual tmp<fvVectorMatrix> divDevRhoReff(volVectorField& U) const
-            {
-                return divDevRhoBeff(U);
             }
 
 
@@ -294,7 +239,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace compressible
+} // End namespace incompressible
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
