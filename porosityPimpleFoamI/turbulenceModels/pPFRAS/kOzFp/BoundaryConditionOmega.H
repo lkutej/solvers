@@ -2,7 +2,6 @@
 	labelList cellBoundaryFaceCount(omega_.size(), 0);
 
 //	dimensionedScalar nu1(transportProperties.lookup("nu"));
-        Info<<"Viscosity "<<nu1<<endl;
 
 	const fvPatchList& patches = mesh_.boundary();
 
