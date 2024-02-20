@@ -34,13 +34,13 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace RASModels
+namespace pPFRASModels
 {
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 defineTypeNameAndDebug(ISkOzF, 0);
-addToRunTimeSelectionTable(RASModel, ISkOzF, dictionary);
+addToRunTimeSelectionTable(pPFRASModel, ISkOzF, dictionary);
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
@@ -195,12 +195,13 @@ ISkOzF::ISkOzF
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
-    const word& turbulenceModelName,
+    const word& pPFTurbulenceModelName,
     const word& modelName
 )
 :
-    RASModel(modelName, U, phi, transport, turbulenceModelName),
+    pPFRASModel(modelName, U, phi, beta, transport, pPFTurbulenceModelName),
 
     Cmu_
     (
@@ -683,8 +684,12 @@ tmp<fvVectorMatrix> ISkOzF::divDevReff(volVectorField& U) const
 {
     return
     (
-      - fvm::laplacian(nuEff(), U)
-      - fvc::div(nuEff()*dev(fvc::grad(U)().T()))
+        -1.0/beta_*
+        (
+            fvm::laplacian(nut_*beta_, U)
+          + fvc::div(nut_*U*fvc::grad(beta_))
+          + fvc::div(nut_*dev2(T(fvc::grad(beta_*U))))
+        )
     );
 }
 
@@ -705,7 +710,7 @@ tmp<fvVectorMatrix> ISkOzF::divDevRhoReff
 
 bool ISkOzF::read()
 {
-    if (RASModel::read())
+    if (pPFRASModel::read())
     {
         Cmu_.readIfPresent(coeffDict());
         CEps2_.readIfPresent(coeffDict());
@@ -744,7 +749,7 @@ bool ISkOzF::read()
 
 void ISkOzF::correct()
 {
-    RASModel::correct();
+    pPFRASModel::correct();
 
     if (!turbulence_)
     {
@@ -773,9 +778,10 @@ void ISkOzF::correct()
     volTensorField epsilonrTens_ = 2*nu()*(graduPrime.T() & graduPrime);
     epsilonr_ = 0.5*tr(epsilonrTens_);
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-
-    volScalarField G("RASModel::G", nut_*2*magSqr(symm(fvc::grad(U_))));
+ 
+    surfaceScalarField betaf = fvc::interpolate(beta_);
+    
+    volScalarField G("pPFRASModel::G", nut_*2*magSqr(symm(fvc::grad(U_))));
     volScalarField CEps1_ = 0.0*zeta_;
     if (Ceps1zetaSwitch_.value() == 1.0)
     {   
@@ -787,7 +793,11 @@ void ISkOzF::correct()
         CEps1_ = 1.4252+0.0*zeta_;
         Info<<"Ceps1 w/o zeta"<<endl;
     }
-    
+   
+    /* Source Term */
+    dimensionedScalar K("K", sqr(dimLength), 7.111e-6);
+    volScalarField B = neg(beta_-0.9999)*0.001*beta_*k_*mag(beta_*U_)/sqrt(K); 
+    Info<<"Source Term"<<endl;
 
     volScalarField T_ = Tau();
     volScalarField L_ = L();
@@ -825,12 +835,6 @@ void ISkOzF::correct()
         Psas = max(0.003*(T1_ - CT2_*T2_), Psaslim);
         Info<<"Psas limiter disabled"<<endl;
     }
-    else if (Clim_.value() == -1.0)
-    {
-        T1_ = 40.0*1.775*0.41*mag(fvc::laplacian(U_))*sqrt(k_);
-        Psas = max(0.003*(T1_ - CT2_*T2_));
-        Info<<"Psas limiter disabled, no zero bounding"<<endl;
-    }
     else
     {
         T1_ = 40.0*1.775*0.41*mag(2.0*symm(fvc::grad(U_)))*1.0/max(Lderiv, LvKdeltaTest)*sqrt(k_);
@@ -853,11 +857,12 @@ void ISkOzF::correct()
     tmp<fvScalarMatrix> omegaEqn
     (
         fvm::ddt(omega_)
-      + fvm::div(phi_, omega_)
+      + fvm::div(phi_/betaf, omega_)
       - fvm::laplacian(DepsilonEff(), omega_)
       ==
         (CEps1_-1.0)*G/k_*omega_
       - fvm::SuSp((CEps2_-1.0)*omega_, omega_)
+      + (CEps2_-1.0)*omega_*B/k_
       + fvm::Sp(CD, omega_) // Cross diffusion
       + fvm::SuSp(SdiffSwitch_*(fvc::laplacian(DepsilonEff(), k_) - fvc::laplacian(DkEff(), k_))/k_, omega_) // Zero, if sigmaEps=sigmaK
       + Csas_*Psas
@@ -899,11 +904,12 @@ void ISkOzF::correct()
     tmp<fvScalarMatrix> kEqn
     (
         fvm::ddt(k_)
-      + fvm::div(phi_, k_)
+      + fvm::div(phi_/betaf, k_)
       - fvm::laplacian(DkEff(), k_)
      ==
         G
       - fvm::Sp(epsilon_/k_, k_)
+      + B
      );
 
     kEqn().relax();
@@ -940,7 +946,7 @@ void ISkOzF::correct()
         tmp<fvScalarMatrix> zetaEqn
         (
             fvm::ddt(zeta_)
-          + fvm::div(phi_, zeta_)
+          + fvm::div(phi_/betaf, zeta_)
           - fvm::laplacian(DzetaEff(), zeta_)
          ==
             fTilda
@@ -979,7 +985,7 @@ void ISkOzF::correct()
         tmp<fvScalarMatrix> zetaEqn
         (
             fvm::ddt(zeta_)
-          + fvm::div(phi_, zeta_)
+          + fvm::div(phi_/betaf, zeta_)
           - fvm::laplacian(DzetaEff(), zeta_)
          ==
 //            min(f_, (C1_+(C2_*G/(epsilon_)))*((zeta_ - 2.0/3.0))/T_)
@@ -996,6 +1002,8 @@ void ISkOzF::correct()
     // Re-calculate viscosity
     if (DavidsonSwitch_.value() == 0.0)
     {
+        //nut_ = pos(beta_-1.0)*Cmu_*zeta_*k_*T_;
+        //Info<<"nut disabled in porous region!"<<endl;        
         nut_ = Cmu_*zeta_*k_*T_;
     }
     else if (DavidsonSwitch_.value() == 1.0)
@@ -1004,8 +1012,8 @@ void ISkOzF::correct()
     }
     else if (DavidsonSwitch_.value() == 2.0)
     {
-        nut_ = 0.22*sqr(k_)/epsilon_;
-        Info<<"kE-mode, Cmu=0.22"<<endl;
+        nut_ = 0.09*sqr(k_)/epsilon_;
+        Info<<"kE-mode"<<endl;
     }
     nut_.correctBoundaryConditions();
 
@@ -1023,7 +1031,7 @@ void ISkOzF::correct()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace RASModels
+} // End namespace pPFRASModels
 } // End namespace incompressible
 } // End namespace Foam
 
