@@ -23,35 +23,35 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "GenEddyVisc.H"
+#include "pPFGenEddyVisc.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace compressible
+namespace incompressible
 {
-namespace LESModels
+namespace pPFLESModels
 {
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameWithName(GenEddyVisc, "GenEddyVisc");
+defineTypeNameWithName(pPFGenEddyVisc, "pPFGenEddyVisc");
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-GenEddyVisc::GenEddyVisc
+pPFGenEddyVisc::pPFGenEddyVisc
 (
-    const volScalarField& rho,
     const volVectorField& U,
     const surfaceScalarField& phi,
-    const fluidThermo& thermoPhysicalModel,
-    const word& turbulenceModelName,
+    const volScalarField& beta,
+    transportModel& transport,
+    const word& pPFTurbulenceModelName,
     const word& modelName
 )
 :
-    LESModel(modelName, rho, U, phi, thermoPhysicalModel, turbulenceModelName),
+    pPFLESModel(modelName, U, phi, beta, transport, pPFTurbulenceModelName),
 
     ce_
     (
@@ -63,34 +63,11 @@ GenEddyVisc::GenEddyVisc
         )
     ),
 
-    Prt_
-    (
-        dimensioned<scalar>::lookupOrAddToDict
-        (
-            "Prt",
-            coeffDict_,
-            1.0
-        )
-    ),
-
-    muSgs_
+    nuSgs_
     (
         IOobject
         (
-            "muSgs",
-            runTime_.timeName(),
-            mesh_,
-            IOobject::MUST_READ,
-            IOobject::AUTO_WRITE
-        ),
-        mesh_
-    ),
-
-    alphaSgs_
-    (
-        IOobject
-        (
-            "alphaSgs",
+            "nuSgs",
             runTime_.timeName(),
             mesh_,
             IOobject::MUST_READ,
@@ -105,39 +82,59 @@ GenEddyVisc::GenEddyVisc
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-tmp<volSymmTensorField> GenEddyVisc::B() const
+tmp<volSymmTensorField> pPFGenEddyVisc::B() const
 {
-    return ((2.0/3.0)*I)*k() - (muSgs_/rho())*dev(twoSymm(fvc::grad(U())));
+    return ((2.0/3.0)*I)*k() - nuSgs_*twoSymm(fvc::grad(U()));
 }
 
 
-tmp<volSymmTensorField> GenEddyVisc::devRhoBeff() const
+tmp<volSymmTensorField> pPFGenEddyVisc::devReff() const
 {
-    return -muEff()*dev(twoSymm(fvc::grad(U())));
+    return -nuEff()*dev(twoSymm(fvc::grad(U())));
 }
 
 
-tmp<fvVectorMatrix> GenEddyVisc::divDevRhoBeff(volVectorField& U) const
+tmp<fvVectorMatrix> pPFGenEddyVisc::divDevReff(volVectorField& U) const
 {
     return
     (
-      - fvm::laplacian(muEff(), U) - fvc::div(muEff()*dev2(T(fvc::grad(U))))
+      -1.0/beta_*
+      (
+          fvm::laplacian(nuSgs_*beta_, U)
+          + fvc::div(nuSgs_*U*fvc::grad(beta_))
+          + fvc::div(nuSgs_*dev2(T(fvc::grad(beta_*U))))
+      )
     );
 }
 
 
-void GenEddyVisc::correct(const tmp<volTensorField>& gradU)
+tmp<fvVectorMatrix> pPFGenEddyVisc::divDevRhoReff
+(
+    const volScalarField& rho,
+    volVectorField& U
+) const
 {
-    LESModel::correct(gradU);
+    volScalarField muEff("muEff", rho*nuEff());
+
+    return
+    (
+      - fvm::laplacian(muEff, U)
+      - fvc::div(muEff*dev(T(fvc::grad(U))))
+    );
 }
 
 
-bool GenEddyVisc::read()
+void pPFGenEddyVisc::correct(const tmp<volTensorField>& gradU)
 {
-    if (LESModel::read())
+    pPFLESModel::correct(gradU);
+}
+
+
+bool pPFGenEddyVisc::read()
+{
+    if (pPFLESModel::read())
     {
         ce_.readIfPresent(coeffDict());
-        Prt_.readIfPresent(coeffDict());
 
         return true;
     }
@@ -150,8 +147,8 @@ bool GenEddyVisc::read()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace LESModels
-} // End namespace compressible
+} // End namespace pPFLESModels
+} // End namespace incompressible
 } // End namespace Foam
 
 // ************************************************************************* //
