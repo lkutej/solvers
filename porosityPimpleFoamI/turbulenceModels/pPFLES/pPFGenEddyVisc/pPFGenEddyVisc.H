@@ -22,50 +22,50 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::compressible::LESModels::GenEddyVisc
+    Foam::incompressible::LESModels::pPFGenEddyVisc
 
 Group
-    grpCmpLESTurbulence
+    grpIcoLESTurbulence
 
 Description
-    General base class for all compressible models that can be implemented as
-    an eddy viscosity, i.e. algebraic and one-equation models.
+    General base class for all incompressible models that can be implemented
+    as an eddy viscosity, i.e. algebraic and one-equation models.
 
     Contains fields for k (SGS turbulent kinetic energy), gamma
     (modelled viscosity) and epsilon (SGS dissipation).
 
 SourceFiles
-    GenEddyVisc.C
+    pPFGenEddyVisc.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef compressibleGenEddyVisc_H
-#define compressibleGenEddyVisc_H
+#ifndef pPFGenEddyVisc_H
+#define pPFGenEddyVisc_H
 
-#include "LESModel.H"
+#include "pPFLESModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace compressible
+namespace incompressible
 {
-namespace LESModels
+namespace pPFLESModels
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class GenEddyVisc Declaration
+                         Class pPFGenEddyVisc Declaration
 \*---------------------------------------------------------------------------*/
 
-class GenEddyVisc
+class pPFGenEddyVisc
 :
-    virtual public LESModel
+    virtual public pPFLESModel
 {
     // Private Member Functions
 
         // Disallow default bitwise copy construct and assignment
-        GenEddyVisc(const GenEddyVisc&);
-        GenEddyVisc& operator=(const GenEddyVisc&);
+        pPFGenEddyVisc(const pPFGenEddyVisc&);
+        pPFGenEddyVisc& operator=(const pPFGenEddyVisc&);
 
 
 protected:
@@ -73,13 +73,10 @@ protected:
     // Model coefficients
 
         dimensionedScalar ce_;
-        dimensionedScalar Prt_;
-
 
     // Fields
 
-        volScalarField muSgs_;
-        volScalarField alphaSgs_;
+        volScalarField nuSgs_;
 
 
 public:
@@ -90,19 +87,19 @@ public:
     // Constructors
 
         //- Construct from components
-        GenEddyVisc
+        pPFGenEddyVisc
         (
-            const volScalarField& rho,
             const volVectorField& U,
             const surfaceScalarField& phi,
-            const fluidThermo& thermoPhysicalModel,
-            const word& turbulenceModelName = turbulenceModel::typeName,
+            const volScalarField& beta,
+            transportModel& transport,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName,
             const word& modelName = typeName
         );
 
 
     //- Destructor
-    virtual ~GenEddyVisc()
+    virtual ~pPFGenEddyVisc()
     {}
 
 
@@ -128,28 +125,30 @@ public:
             );
         }
 
-        //- Return viscosity
-        virtual tmp<volScalarField> muSgs() const
+        //- Return the SGS viscosity.
+        virtual tmp<volScalarField> nuSgs() const
         {
-            return muSgs_;
-        }
-
-        //- Return thermal diffusivity
-        virtual tmp<volScalarField> alphaSgs() const
-        {
-            return alphaSgs_;
+            return nuSgs_;
         }
 
         //- Return the sub-grid stress tensor.
         virtual tmp<volSymmTensorField> B() const;
 
+        //- Return the effective sub-grid turbulence stress tensor
+        //  including the laminar stress
+        virtual tmp<volSymmTensorField> devReff() const;
+
         //- Return the deviatoric part of the effective sub-grid
         //  turbulence stress tensor including the laminar stress
-        virtual tmp<volSymmTensorField> devRhoBeff() const;
+        virtual tmp<fvVectorMatrix> divDevReff(volVectorField& U) const;
 
-        //- Returns div(rho*dev(B)).
-        // This is the additional term due to the filtering of the NSE.
-        virtual tmp<fvVectorMatrix> divDevRhoBeff(volVectorField& U) const;
+        //- Return the deviatoric part of the effective sub-grid
+        //  turbulence stress tensor including the laminar stress
+        virtual tmp<fvVectorMatrix> divDevRhoReff
+        (
+            const volScalarField& rho,
+            volVectorField& U
+        ) const;
 
         //- Correct Eddy-Viscosity and related properties
         virtual void correct(const tmp<volTensorField>& gradU);
@@ -161,8 +160,8 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace LESModels
-} // End namespace compressible
+} // End namespace pPFLESModels
+} // End namespace incompressible
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
