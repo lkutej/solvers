@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::incompressible::RASModels::zetaF
+    Foam::incompressible::RASModels::kOzFp
 
 Description
     Zeta-effe turbulence model for incompressible flows.
@@ -34,7 +34,7 @@ Description
 
     The default model coefficients correspond to the following:
     \verbatim
-        zetaFCoeffs
+        kOzFpCoeffs
         {
              Cmu_         0.22,
              CEps2_       1.90,
@@ -50,14 +50,14 @@ Description
     \endverbatim
 
 SourceFiles
-    zetaF.C
+    kOzFp.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef zetaF_H
-#define zetaF_H
+#ifndef kOzFp_H
+#define kOzFp_H
 
-#include "RASModel.H"
+#include "pPFRASModel.H"
 #include "wallDistReflection.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -65,16 +65,16 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace RASModels
+namespace pPFRASModels
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class zetaF Declaration
+                           Class kOzFp Declaration
 \*---------------------------------------------------------------------------*/
 
-class zetaF
+class kOzFp
 :
-    public RASModel
+    public pPFRASModel
 {
 
 protected:
@@ -89,20 +89,48 @@ protected:
             dimensionedScalar C2_;
             dimensionedScalar sigmaK_;
             dimensionedScalar sigmaEps_;
+            dimensionedScalar sigmaCDv_;
+            dimensionedScalar sigmaCDt_;
             dimensionedScalar sigmaZ_;
             dimensionedScalar CTau_;
             dimensionedScalar CL_;
             dimensionedScalar CEta_;
             dimensionedScalar a_;
+            dimensionedScalar TSwitch_;
+            dimensionedScalar LSwitch_;
+            dimensionedScalar Csas_;
+            dimensionedScalar CT2_;
+            dimensionedScalar Clim_;
+            dimensionedScalar fwSwitch_;
+            dimensionedScalar fEqnPbykSwitch_;
+            dimensionedScalar DavidsonSwitch_;
+            dimensionedScalar LTaylorSwitch_;
+            dimensionedScalar SdiffSwitch_;
+            dimensionedScalar CDtboundSwitch_;
+            dimensionedScalar Ceps1zetaSwitch_;
+            dimensionedScalar ck_;
+            dimensionedScalar co_;
 
         // Fields
 
             volScalarField k_;
+            volScalarField kr_;
             volScalarField epsilon_;
+            volScalarField epsilonr_;
+            volScalarField omega_;
             volScalarField zeta_;
             volScalarField f_;
             volScalarField nut_;
             wallDistReflection yr_;
+            volScalarField delta_;
+            volScalarField T1_;
+            volScalarField T2_;
+
+       // averaging
+            IOdictionary VLESAveragingProperties_;
+            dimensionedScalar Dt_;
+            volVectorField UAvg_;
+
        //- Lower limit of zeta
  	    dimensionedScalar mTSmall_;
             dimensionedScalar zetaMin_;
@@ -114,29 +142,32 @@ protected:
 
             tmp<volScalarField> Tau() const;
             tmp<volScalarField> L() const;
+            void calculateDelta();
+            void writeAveragingProperties() const;
 	// Wall distance reflection
 	    
 
 public:
 
     //- Runtime type information
-    TypeName("zetaF");
+    TypeName("kOzFp");
 
     // Constructors
 
         //- Construct from components
-        zetaF
+        kOzFp
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = turbulenceModel::typeName,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName,
             const word& modelName = typeName
         );
 
 
     //- Destructor
-    virtual ~zetaF()
+    virtual ~kOzFp()
     {}
 
 
@@ -248,7 +279,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace RASModels
+} // End namespace pPFRASModels
 } // End namespace incompressible
 } // End namespace Foam
 
