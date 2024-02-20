@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,33 +22,35 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Namespace
-    Foam::compressible::RASModels
+    Foam::incompressible::pPFRASModels
+
+Group
+    grpIcoRASTurbulence
 
 Description
-    Namespace for compressible RAS turbulence models.
+    Namespace for incompressible RAS turbulence models.
 
 Class
-    Foam::compressible::RASModel
+    Foam::incompressible::pPFRASModel
 
 Description
-    Abstract base class for turbulence models for compressible and combusting
-    flows.
+    Abstract base class for incompressible turbulence models.
 
 SourceFiles
-    RASModel.C
+    pPFRASModel.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef compressibleRASModel_H
-#define compressibleRASModel_H
+#ifndef pPFRASModel_H
+#define pPFRASModel_H
 
-#include "compressible/turbulenceModel/turbulenceModel.H"
+#include "../pPFTurbulenceModel/pPFTurbulenceModel.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "fvm.H"
 #include "fvc.H"
 #include "fvMatrices.H"
-#include "fluidThermo.H"
+#include "incompressible/transportModel/transportModel.H"
 #include "IOdictionary.H"
 #include "Switch.H"
 #include "bound.H"
@@ -59,16 +61,16 @@ SourceFiles
 
 namespace Foam
 {
-namespace compressible
+namespace incompressible
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class RASModel Declaration
+                           Class pPFRASModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class RASModel
+class pPFRASModel
 :
-    public turbulenceModel,
+    public pPFTurbulenceModel,
     public IOdictionary
 {
 
@@ -106,16 +108,16 @@ private:
     // Private Member Functions
 
         //- Disallow default bitwise copy construct
-        RASModel(const RASModel&);
+        pPFRASModel(const pPFRASModel&);
 
         //- Disallow default bitwise assignment
-        void operator=(const RASModel&);
+        void operator=(const pPFRASModel&);
 
 
 public:
 
     //- Runtime type information
-    TypeName("RASModel");
+    TypeName("pPFRASModel");
 
 
     // Declare run-time constructor selection table
@@ -123,48 +125,48 @@ public:
         declareRunTimeSelectionTable
         (
             autoPtr,
-            RASModel,
+            pPFRASModel,
             dictionary,
             (
-                const volScalarField& rho,
                 const volVectorField& U,
                 const surfaceScalarField& phi,
-                const fluidThermo& thermoPhysicalModel,
-                const word& turbulenceModelName
+                const volScalarField& beta,
+                transportModel& transport,
+                const word& pPFTurbulenceModelName
             ),
-            (rho, U, phi, thermoPhysicalModel, turbulenceModelName)
+            (U, phi, beta, transport, pPFTurbulenceModelName)
         );
 
 
     // Constructors
 
         //- Construct from components
-        RASModel
+        pPFRASModel
         (
             const word& type,
-            const volScalarField& rho,
             const volVectorField& U,
             const surfaceScalarField& phi,
-            const fluidThermo& thermoPhysicalModel,
-            const word& turbulenceModelName = turbulenceModel::typeName
+            const volScalarField& beta,
+            transportModel& transport,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName
         );
 
 
     // Selectors
 
         //- Return a reference to the selected RAS model
-        static autoPtr<RASModel> New
+        static autoPtr<pPFRASModel> New
         (
-            const volScalarField& rho,
             const volVectorField& U,
             const surfaceScalarField& phi,
-            const fluidThermo& thermoPhysicalModel,
-            const word& turbulenceModelName = turbulenceModel::typeName
+            const volScalarField& beta,
+            transportModel& transport,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName
         );
 
 
     //- Destructor
-    virtual ~RASModel()
+    virtual ~pPFRASModel()
     {}
 
 
@@ -216,36 +218,12 @@ public:
 
 
         //- Return the effective viscosity
-        virtual tmp<volScalarField> muEff() const
+        virtual tmp<volScalarField> nuEff() const
         {
             return tmp<volScalarField>
             (
-                new volScalarField("muEff", mut() + mu())
+                new volScalarField("nuEff", nut() + nu())
             );
-        }
-
-        //- Return the effective turbulent temperature diffusivity
-        virtual tmp<volScalarField> kappaEff() const
-        {
-            return thermo().kappaEff(alphat());
-        }
-
-        //- Return the effective turbulent temperature diffusivity for a patch
-        virtual tmp<scalarField> kappaEff(const label patchI) const
-        {
-            return thermo().kappaEff(alphat(patchI), patchI);
-        }
-
-        //- Return the effective turbulent thermal diffusivity
-        virtual tmp<volScalarField> alphaEff() const
-        {
-            return thermo().alphaEff(alphat());
-        }
-
-        //- Return the effective turbulent thermal diffusivity for a patch
-        virtual tmp<scalarField> alphaEff(const label patchI) const
-        {
-            return thermo().alphaEff(alphat(patchI), patchI);
         }
 
         //- Solve the turbulence equations and correct the turbulence viscosity
@@ -258,7 +236,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace compressible
+} // End namespace incompressible
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
