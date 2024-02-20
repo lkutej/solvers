@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::incompressible::RASModels::ISkOzF
+    Foam::incompressible::RASModels::ISkOzFp
 
 Description
     Zeta-effe turbulence model for incompressible flows.
@@ -34,7 +34,7 @@ Description
 
     The default model coefficients correspond to the following:
     \verbatim
-        ISkOzFCoeffs
+        ISkOzFpCoeffs
         {
              Cmu_         0.22,
              CEps2_       1.90,
@@ -50,12 +50,12 @@ Description
     \endverbatim
 
 SourceFiles
-    ISkOzF.C
+    ISkOzFp.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef ISkOzF_H
-#define ISkOzF_H
+#ifndef ISkOzFp_H
+#define ISkOzFp_H
 
 #include "pPFRASModel.H"
 #include "wallDistReflection.H"
@@ -69,10 +69,10 @@ namespace pPFRASModels
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class ISkOzF Declaration
+                           Class ISkOzFp Declaration
 \*---------------------------------------------------------------------------*/
 
-class ISkOzF
+class ISkOzFp
 :
     public pPFRASModel
 {
@@ -108,6 +108,7 @@ protected:
             dimensionedScalar SdiffSwitch_;
             dimensionedScalar CDtboundSwitch_;
             dimensionedScalar Ceps1zetaSwitch_;
+            dimensionedScalar ck_;
 
         // Fields
 
@@ -148,12 +149,12 @@ protected:
 public:
 
     //- Runtime type information
-    TypeName("ISkOzF");
+    TypeName("ISkOzFp");
 
     // Constructors
 
         //- Construct from components
-        ISkOzF
+        ISkOzFp
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
@@ -165,7 +166,7 @@ public:
 
 
     //- Destructor
-    virtual ~ISkOzF()
+    virtual ~ISkOzFp()
     {}
 
 
