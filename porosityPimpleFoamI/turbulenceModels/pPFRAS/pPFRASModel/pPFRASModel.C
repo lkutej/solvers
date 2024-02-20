@@ -23,26 +23,25 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "RASModel.H"
-#include "wallFvPatch.H"
+#include "pPFRASModel.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace compressible
+namespace incompressible
 {
 
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(RASModel, 0);
-defineRunTimeSelectionTable(RASModel, dictionary);
-addToRunTimeSelectionTable(turbulenceModel, RASModel, turbulenceModel);
+defineTypeNameAndDebug(pPFRASModel, 0);
+defineRunTimeSelectionTable(pPFRASModel, dictionary);
+addToRunTimeSelectionTable(pPFTurbulenceModel, pPFRASModel, pPFTurbulenceModel);
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void RASModel::printCoeffs()
+void pPFRASModel::printCoeffs()
 {
     if (printCoeffs_)
     {
@@ -53,17 +52,17 @@ void RASModel::printCoeffs()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-RASModel::RASModel
+pPFRASModel::pPFRASModel
 (
     const word& type,
-    const volScalarField& rho,
     const volVectorField& U,
     const surfaceScalarField& phi,
-    const fluidThermo& thermophysicalModel,
-    const word& turbulenceModelName
+    const volScalarField& beta,
+    transportModel& transport,
+    const word& pPFTurbulenceModelName
 )
 :
-    turbulenceModel(rho, U, phi, thermophysicalModel, turbulenceModelName),
+    pPFTurbulenceModel(U, phi, beta, transport, pPFTurbulenceModelName),
 
     IOdictionary
     (
@@ -95,15 +94,15 @@ RASModel::RASModel
 }
 
 
-// * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * //
 
-autoPtr<RASModel> RASModel::New
+autoPtr<pPFRASModel> pPFRASModel::New
 (
-    const volScalarField& rho,
     const volVectorField& U,
     const surfaceScalarField& phi,
-    const fluidThermo& thermophysicalModel,
-    const word& turbulenceModelName
+    const volScalarField& beta,
+    transportModel& transport,
+    const word& pPFTurbulenceModelName
 )
 {
     // get model name, but do not register the dictionary
@@ -121,7 +120,7 @@ autoPtr<RASModel> RASModel::New
                 IOobject::NO_WRITE,
                 false
             )
-        ).lookup("RASModel")
+        ).lookup("pPFRASModel")
     );
 
     Info<< "Selecting RAS turbulence model " << modelType << endl;
@@ -133,37 +132,36 @@ autoPtr<RASModel> RASModel::New
     {
         FatalErrorIn
         (
-            "RASModel::New"
+            "pPFRASModel::New"
             "("
-                "const volScalarField&, "
                 "const volVectorField&, "
                 "const surfaceScalarField&, "
-                "fluidThermo&, "
+                "transportModel&, "
                 "const word&"
             ")"
-        )   << "Unknown RASModel type "
+        )   << "Unknown pPFRASModel type "
             << modelType << nl << nl
-            << "Valid RASModel types:" << endl
+            << "Valid pPFRASModel types:" << endl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }
 
-    return autoPtr<RASModel>
+    return autoPtr<pPFRASModel>
     (
-        cstrIter()(rho, U, phi, thermophysicalModel, turbulenceModelName)
+        cstrIter()(U, phi, beta, transport, pPFTurbulenceModelName)
     );
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void RASModel::correct()
+void pPFRASModel::correct()
 {
-    turbulenceModel::correct();
+    pPFTurbulenceModel::correct();
 }
 
 
-bool RASModel::read()
+bool pPFRASModel::read()
 {
     //if (regIOobject::read())
 
@@ -204,7 +202,7 @@ bool RASModel::read()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace compressible
+} // End namespace incompressible
 } // End namespace Foam
 
 // ************************************************************************* //
