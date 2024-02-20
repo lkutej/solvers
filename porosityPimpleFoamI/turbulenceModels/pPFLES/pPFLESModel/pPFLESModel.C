@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,25 +23,25 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "LESModel.H"
+#include "pPFLESModel.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace compressible
+namespace incompressible
 {
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(LESModel, 0);
-defineRunTimeSelectionTable(LESModel, dictionary);
-addToRunTimeSelectionTable(turbulenceModel, LESModel, turbulenceModel);
+defineTypeNameAndDebug(pPFLESModel, 0);
+defineRunTimeSelectionTable(pPFLESModel, dictionary);
+addToRunTimeSelectionTable(pPFTurbulenceModel, pPFLESModel, pPFTurbulenceModel);
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void LESModel::printCoeffs()
+void pPFLESModel::printCoeffs()
 {
     if (printCoeffs_)
     {
@@ -52,17 +52,17 @@ void LESModel::printCoeffs()
 
 // * * * * * * * * * * * * * * * Constructor * * * * * * * * * * * * * * * * //
 
-LESModel::LESModel
+pPFLESModel::pPFLESModel
 (
     const word& type,
-    const volScalarField& rho,
     const volVectorField& U,
     const surfaceScalarField& phi,
-    const fluidThermo& thermoPhysicalModel,
-    const word& turbulenceModelName
+    const volScalarField& beta,
+    transportModel& transport,
+    const word& pPFTurbulenceModelName
 )
 :
-    turbulenceModel(rho, U, phi, thermoPhysicalModel, turbulenceModelName),
+    pPFTurbulenceModel(U, phi, beta, transport, pPFTurbulenceModelName),
 
     IOdictionary
     (
@@ -80,7 +80,6 @@ LESModel::LESModel
     coeffDict_(subOrEmptyDict(type + "Coeffs")),
 
     kMin_("kMin", sqr(dimVelocity), SMALL),
-
     delta_(LESdelta::New("delta", U.mesh(), *this))
 {
     kMin_.readIfPresent(*this);
@@ -93,13 +92,13 @@ LESModel::LESModel
 
 // * * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * //
 
-autoPtr<LESModel> LESModel::New
+autoPtr<pPFLESModel> pPFLESModel::New
 (
-    const volScalarField& rho,
     const volVectorField& U,
     const surfaceScalarField& phi,
-    const fluidThermo& thermoPhysicalModel,
-    const word& turbulenceModelName
+    const volScalarField& beta,
+    transportModel& transport,
+    const word& pPFTurbulenceModelName
 )
 {
     // get model name, but do not register the dictionary
@@ -117,7 +116,7 @@ autoPtr<LESModel> LESModel::New
                 IOobject::NO_WRITE,
                 false
             )
-        ).lookup("LESModel")
+        ).lookup("pPFLESModel")
     );
 
     Info<< "Selecting LES turbulence model " << modelType << endl;
@@ -129,47 +128,48 @@ autoPtr<LESModel> LESModel::New
     {
         FatalErrorIn
         (
-            "LESModel::New"
+            "pPFLESModel::New"
             "("
-                "const volScalarField&, "
                 "const volVectorField&, "
-                "const surfaceScalarField&, "
-                "const fluidThermo&, "
+                "const surfaceScalarField& ,"
+                "transportModel&, "
                 "const word&"
             ")"
-        )   << "Unknown LESModel type "
+        )   << "Unknown pPFLESModel type "
             << modelType << nl << nl
-            << "Valid LESModel types:" << endl
+            << "Valid pPFLESModel types:" << endl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }
 
-    return autoPtr<LESModel>
+    return autoPtr<pPFLESModel>
     (
-        cstrIter()(rho, U, phi, thermoPhysicalModel, turbulenceModelName)
+        cstrIter()(U, phi, beta, transport, pPFTurbulenceModelName)
     );
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void LESModel::correct(const tmp<volTensorField>&)
+void pPFLESModel::correct(const tmp<volTensorField>&)
 {
-    turbulenceModel::correct();
+    pPFTurbulenceModel::correct();
     delta_().correct();
 }
 
 
-void LESModel::correct()
+void pPFLESModel::correct()
 {
     correct(fvc::grad(U_));
 }
 
 
-bool LESModel::read()
+bool pPFLESModel::read()
 {
+    //if (regIOobject::read())
+
     // Bit of trickery : we are both IOdictionary ('RASProperties') and
-    // an regIOobject (from the turbulenceModel). Problem is to distinguish
+    // an regIOobject from the pPFTurbulenceModel level. Problem is to distinguish
     // between the two - we only want to reread the IOdictionary.
 
     bool ok = IOdictionary::readData
@@ -188,9 +188,9 @@ bool LESModel::read()
             coeffDict_ <<= *dictPtr;
         }
 
-        kMin_.readIfPresent(*this);
-
         delta_().read(*this);
+
+        kMin_.readIfPresent(*this);
 
         return true;
     }
@@ -203,7 +203,7 @@ bool LESModel::read()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace compressible
+} // End namespace incompressible
 } // End namespace Foam
 
 // ************************************************************************* //
