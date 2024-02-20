@@ -1,8 +1,8 @@
 $(OBJECTS_DIR)/VLES.o: VLES/VLES.dep
 VLES/VLES.dep: VLES/VLES.C
 VLES/VLES.dep: VLES/VLES.H
-VLES/VLES.dep: $(WM_PROJECT_DIR)/src/turbulenceModels/incompressible/RAS/RASModel/RASModel.H
-VLES/VLES.dep: $(WM_PROJECT_DIR)/src/turbulenceModels/incompressible/turbulenceModel/turbulenceModel.H
+VLES/VLES.dep: lnInclude/pPFRASModel.H
+VLES/VLES.dep: ../pPFTurbulenceModel/pPFTurbulenceModel.H
 VLES/VLES.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/primitiveFieldsFwd.H
 VLES/VLES.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/fieldTypes.H
 VLES/VLES.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/label.H
