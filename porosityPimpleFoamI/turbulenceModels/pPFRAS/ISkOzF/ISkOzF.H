@@ -57,7 +57,7 @@ SourceFiles
 #ifndef ISkOzF_H
 #define ISkOzF_H
 
-#include "RASModel.H"
+#include "pPFRASModel.H"
 #include "wallDistReflection.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -65,7 +65,7 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace RASModels
+namespace pPFRASModels
 {
 
 /*---------------------------------------------------------------------------*\
@@ -74,7 +74,7 @@ namespace RASModels
 
 class ISkOzF
 :
-    public RASModel
+    public pPFRASModel
 {
 
 protected:
@@ -157,8 +157,9 @@ public:
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = turbulenceModel::typeName,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName,
             const word& modelName = typeName
         );
 
@@ -276,7 +277,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace RASModels
+} // End namespace pPFRASModels
 } // End namespace incompressible
 } // End namespace Foam
 
