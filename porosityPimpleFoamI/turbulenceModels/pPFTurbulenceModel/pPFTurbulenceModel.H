@@ -22,26 +22,26 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Namespace
-    Foam::incompressible::turbulenceModels
+    Foam::incompressible::pPFTurbulenceModels
 
 Description
     Namespace for incompressible turbulence turbulence models.
 
 Class
-    Foam::incompressible::turbulenceModel
+    Foam::incompressible::pPFTurbulenceModel
 
 Description
     Abstract base class for incompressible turbulence models
     (RAS, LES and laminar).
 
 SourceFiles
-    turbulenceModel.C
+    pPFTurbulenceModel.C
     newTurbulenceModel.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef turbulenceModel_H
-#define turbulenceModel_H
+#ifndef pPFTurbulenceModel_H
+#define pPFTurbulenceModel_H
 
 #include "primitiveFieldsFwd.H"
 #include "volFieldsFwd.H"
@@ -64,10 +64,10 @@ namespace incompressible
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class turbulenceModel Declaration
+                           Class pPFTurbulenceModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class turbulenceModel
+class pPFTurbulenceModel
 :
     public regIOobject
 {
@@ -81,6 +81,7 @@ protected:
 
         const volVectorField& U_;
         const surfaceScalarField& phi_;
+        const volScalarField& beta_;
 
         transportModel& transportModel_;
 
@@ -93,16 +94,16 @@ private:
     // Private Member Functions
 
         //- Disallow default bitwise copy construct
-        turbulenceModel(const turbulenceModel&);
+        pPFTurbulenceModel(const pPFTurbulenceModel&);
 
         //- Disallow default bitwise assignment
-        void operator=(const turbulenceModel&);
+        void operator=(const pPFTurbulenceModel&);
 
 
 public:
 
     //- Runtime type information
-    TypeName("turbulenceModel");
+    TypeName("pPFTurbulenceModel");
 
 
     // Declare run-time New selection table
@@ -110,44 +111,47 @@ public:
         declareRunTimeNewSelectionTable
         (
             autoPtr,
-            turbulenceModel,
-            turbulenceModel,
+            pPFTurbulenceModel,
+            pPFTurbulenceModel,
             (
                 const volVectorField& U,
                 const surfaceScalarField& phi,
+                const volScalarField& beta,
                 transportModel& transport,
-                const word& turbulenceModelName
+                const word& pPFTurbulenceModelName
             ),
-            (U, phi, transport, turbulenceModelName)
+            (U, phi, beta, transport, pPFTurbulenceModelName)
         );
 
 
     // Constructors
 
         //- Construct from components
-        turbulenceModel
+        pPFTurbulenceModel
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = typeName
+            const word& pPFTurbulenceModelName = typeName
         );
 
 
     // Selectors
 
         //- Return a reference to the selected turbulence model
-        static autoPtr<turbulenceModel> New
+        static autoPtr<pPFTurbulenceModel> New
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = typeName
+            const word& pPFTurbulenceModelName = typeName
         );
 
 
     //- Destructor
-    virtual ~turbulenceModel()
+    virtual ~pPFTurbulenceModel()
     {}
 
 
@@ -172,6 +176,12 @@ public:
         inline const surfaceScalarField& phi() const
         {
             return phi_;
+        }
+
+        //- Access function to pPFPorosity field
+        inline const volScalarField& beta() const
+        {
+            return beta_;
         }
 
         //- Access function to incompressible transport model
