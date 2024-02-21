@@ -1,0 +1,14 @@
+roughnessModel/roughnessModel.C
+roughnessModel/newRoughnessModel.C
+testModel/testModel.C
+rModel1/rModel1.C
+rModel2/rModel2.C
+constantDrag/constantDrag.C
+linearDrag/linearDrag.C
+prescribedForce/prescribedForce.C
+prescribedDrag/prescribedDrag.C
+prescribedDragMod/prescribedDragMod.C
+prescribedDragBlockage/prescribedDragBlockage.C
+prescribedDragAve/prescribedDragAve.C
+
+LIB = $(FOAM_USER_LIBBIN)/librFFroughnessModels
