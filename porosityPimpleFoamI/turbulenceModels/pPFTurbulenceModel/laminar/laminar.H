@@ -35,7 +35,7 @@ SourceFiles
 #ifndef laminar_H
 #define laminar_H
 
-#include "turbulenceModel.H"
+#include "pPFTurbulenceModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -50,7 +50,7 @@ namespace incompressible
 
 class laminar
 :
-    public turbulenceModel
+    public pPFTurbulenceModel
 {
 
 public:
@@ -65,8 +65,9 @@ public:
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = turbulenceModel::typeName
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName
         );
 
 
@@ -77,8 +78,9 @@ public:
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = turbulenceModel::typeName
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName
         );
 
 
