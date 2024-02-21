@@ -96,7 +96,6 @@ protected:
             dimensionedScalar a_;
             dimensionedScalar TSwitch_;
             dimensionedScalar LSwitch_;
-            dimensionedScalar ck_;
 
         // Fields
 
