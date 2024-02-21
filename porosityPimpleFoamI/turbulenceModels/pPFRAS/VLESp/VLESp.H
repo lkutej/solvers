@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::incompressible::pPFRASModels::VLES
+    Foam::incompressible::pPFRASModels::VLESp
 
 Description
     Zeta-effe turbulence model for incompressible flows.
@@ -34,7 +34,7 @@ Description
 
     The default model coefficients correspond to the following:
     \verbatim
-        VLESCoeffs
+        VLESpCoeffs
         {
              Cmu_         0.22,
              CEps2_       1.90,
@@ -50,12 +50,12 @@ Description
     \endverbatim
 
 SourceFiles
-    VLES.C
+    VLESp.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef VLES_H
-#define VLES_H
+#ifndef VLESp_H
+#define VLESp_H
 
 #include "pPFRASModel.H"
 #include "wallDistReflection.H"
@@ -69,10 +69,10 @@ namespace pPFRASModels
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class VLES Declaration
+                           Class VLESp Declaration
 \*---------------------------------------------------------------------------*/
 
-class VLES
+class VLESp
 :
     public pPFRASModel
 {
@@ -96,6 +96,7 @@ protected:
             dimensionedScalar a_;
             dimensionedScalar TSwitch_;
             dimensionedScalar LSwitch_;
+            dimensionedScalar ck_;
 
         // Fields
 
@@ -134,12 +135,12 @@ protected:
 public:
 
     //- Runtime type information
-    TypeName("VLES");
+    TypeName("VLESp");
 
     // Constructors
 
         //- Construct from components
-        VLES
+        VLESp
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
@@ -151,7 +152,7 @@ public:
 
 
     //- Destructor
-    virtual ~VLES()
+    virtual ~VLESp()
     {}
 
 
