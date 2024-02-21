@@ -1,7 +1,7 @@
 $(OBJECTS_DIR)/laminar.o: laminar/laminar.dep
 laminar/laminar.dep: laminar/laminar.C
 laminar/laminar.dep: laminar/laminar.H
-laminar/laminar.dep: turbulenceModel.H
+laminar/laminar.dep: pPFTurbulenceModel.H
 laminar/laminar.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/primitiveFieldsFwd.H
 laminar/laminar.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/fieldTypes.H
 laminar/laminar.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/label.H
