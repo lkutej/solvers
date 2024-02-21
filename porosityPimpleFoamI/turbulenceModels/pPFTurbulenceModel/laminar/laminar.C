@@ -42,7 +42,7 @@ namespace incompressible
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 defineTypeNameAndDebug(laminar, 0);
-addToRunTimeSelectionTable(turbulenceModel, laminar, turbulenceModel);
+addToRunTimeSelectionTable(pPFTurbulenceModel, laminar, pPFTurbulenceModel);
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -50,11 +50,12 @@ laminar::laminar
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
-    const word& turbulenceModelName
+    const word& pPFTurbulenceModelName
 )
 :
-    turbulenceModel(U, phi, transport, turbulenceModelName)
+    pPFTurbulenceModel(U, phi, beta, transport, pPFTurbulenceModelName)
 {}
 
 
@@ -64,13 +65,14 @@ autoPtr<laminar> laminar::New
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
-    const word& turbulenceModelName
+    const word& pPFTurbulenceModelName
 )
 {
     return autoPtr<laminar>
     (
-        new laminar(U, phi, transport, turbulenceModelName)
+        new laminar(U, phi, beta, transport, pPFTurbulenceModelName)
     );
 }
 
@@ -203,8 +205,7 @@ tmp<fvVectorMatrix> laminar::divDevReff(volVectorField& U) const
 {
     return
     (
-      - fvm::laplacian(nuEff(), U)
-      - fvc::div(nuEff()*dev(T(fvc::grad(U))))
+      fvm::laplacian(nu()*0.0, U)
     );
 }
 
@@ -227,7 +228,7 @@ tmp<fvVectorMatrix> laminar::divDevRhoReff
 
 void laminar::correct()
 {
-    turbulenceModel::correct();
+    pPFTurbulenceModel::correct();
 }
 
 
