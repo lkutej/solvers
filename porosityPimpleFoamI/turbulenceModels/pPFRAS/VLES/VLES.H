@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::incompressible::RASModels::VLES
+    Foam::incompressible::pPFRASModels::VLES
 
 Description
     Zeta-effe turbulence model for incompressible flows.
@@ -57,7 +57,7 @@ SourceFiles
 #ifndef VLES_H
 #define VLES_H
 
-#include "RASModel.H"
+#include "pPFRASModel.H"
 #include "wallDistReflection.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -65,7 +65,7 @@ namespace Foam
 {
 namespace incompressible
 {
-namespace RASModels
+namespace pPFRASModels
 {
 
 /*---------------------------------------------------------------------------*\
@@ -74,7 +74,7 @@ namespace RASModels
 
 class VLES
 :
-    public RASModel
+    public pPFRASModel
 {
 
 protected:
@@ -143,8 +143,9 @@ public:
         (
             const volVectorField& U,
             const surfaceScalarField& phi,
+            const volScalarField& beta,
             transportModel& transport,
-            const word& turbulenceModelName = turbulenceModel::typeName,
+            const word& pPFTurbulenceModelName = pPFTurbulenceModel::typeName,
             const word& modelName = typeName
         );
 
@@ -262,7 +263,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace RASModels
+} // End namespace pPFRASModels
 } // End namespace incompressible
 } // End namespace Foam
 
