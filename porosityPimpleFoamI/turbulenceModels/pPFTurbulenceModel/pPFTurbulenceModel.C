@@ -23,7 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "turbulenceModel.H"
+#include "pPFTurbulenceModel.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "wallFvPatch.H"
@@ -37,24 +37,25 @@ namespace incompressible
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(turbulenceModel, 0);
-defineRunTimeSelectionTable(turbulenceModel, turbulenceModel);
+defineTypeNameAndDebug(pPFTurbulenceModel, 0);
+defineRunTimeSelectionTable(pPFTurbulenceModel, pPFTurbulenceModel);
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-turbulenceModel::turbulenceModel
+pPFTurbulenceModel::pPFTurbulenceModel
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
-    const word& turbulenceModelName
+    const word& pPFTurbulenceModelName
 )
 :
     regIOobject
     (
         IOobject
         (
-            turbulenceModelName,
+            pPFTurbulenceModelName,
             U.time().constant(),
             U.db(),
             IOobject::NO_READ,
@@ -66,6 +67,7 @@ turbulenceModel::turbulenceModel
 
     U_(U),
     phi_(phi),
+    beta_(beta),
     transportModel_(transport),
     y_(mesh_)
 {}
@@ -73,12 +75,13 @@ turbulenceModel::turbulenceModel
 
 // * * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * //
 
-autoPtr<turbulenceModel> turbulenceModel::New
+autoPtr<pPFTurbulenceModel> pPFTurbulenceModel::New
 (
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& beta,
     transportModel& transport,
-    const word& turbulenceModelName
+    const word& pPFTurbulenceModelName
 )
 {
     // get model name, but do not register the dictionary
@@ -101,32 +104,32 @@ autoPtr<turbulenceModel> turbulenceModel::New
 
     Info<< "Selecting turbulence model type " << modelType << endl;
 
-    turbulenceModelConstructorTable::iterator cstrIter =
-        turbulenceModelConstructorTablePtr_->find(modelType);
+    pPFTurbulenceModelConstructorTable::iterator cstrIter =
+        pPFTurbulenceModelConstructorTablePtr_->find(modelType);
 
-    if (cstrIter == turbulenceModelConstructorTablePtr_->end())
+    if (cstrIter == pPFTurbulenceModelConstructorTablePtr_->end())
     {
         FatalErrorIn
         (
-            "turbulenceModel::New(const volVectorField&, "
+            "pPFTurbulenceModel::New(const volVectorField&, "
             "const surfaceScalarField&, transportModel&, const word&)"
-        )   << "Unknown turbulenceModel type "
+        )   << "Unknown pPFTurbulenceModel type "
             << modelType << nl << nl
-            << "Valid turbulenceModel types:" << endl
-            << turbulenceModelConstructorTablePtr_->sortedToc()
+            << "Valid pPFTurbulenceModel types:" << endl
+            << pPFTurbulenceModelConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }
 
-    return autoPtr<turbulenceModel>
+    return autoPtr<pPFTurbulenceModel>
     (
-        cstrIter()(U, phi, transport, turbulenceModelName)
+        cstrIter()(U, phi, beta, transport, pPFTurbulenceModelName)
     );
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void turbulenceModel::correct()
+void pPFTurbulenceModel::correct()
 {
     transportModel_.correct();
 
