@@ -1,0 +1,13 @@
+pPFRASModel/pPFRASModel.C
+
+VLES/VLES.C
+ISkOzF/ISkOzF.C
+kOzFp/kOzFp.C
+ISkOzFp/ISkOzFp.C
+VLESp/VLESp.C	
+deLemoskEp/deLemoskEp.C
+NakayamakEp/NakayamakEp.C
+kOzFp2/kOzFp2.C
+ISkOzFpSource/ISkOzFpSource.C
+
+LIB = $(FOAM_USER_LIBBIN)/libpPFincompressibleRASModelsI
