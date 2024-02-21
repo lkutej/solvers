@@ -1,0 +1,9 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+set -x
+
+wmake libso turbulenceModels/pPFTurbulenceModel
+wmake libso turbulenceModels/pPFRAS
+wmake libso turbulenceModels/pPFLES
+wmake libso porosityModels
+wmake
